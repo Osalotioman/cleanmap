@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { generateToken } from '@/services/token-service';
 import {
@@ -83,8 +83,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       return errorResponse('Invalid email format', 400);
     }
 
-    // Authenticate with Supabase
-    const supabase = createAdminClient();
+    // Authenticate with Supabase (using regular client, not admin)
+    const supabase = await createClient();
     const { data: authData, error: authError } =
       await supabase.auth.signInWithPassword({
         email: email.toLowerCase(),
