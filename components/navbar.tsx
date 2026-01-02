@@ -1,6 +1,20 @@
+'use client';
+
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
 
 export default function Navbar() {
+  const { user, profile, signOut, loading } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
   return (
     <nav className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
       <div className="container mx-auto px-4">
@@ -12,7 +26,7 @@ export default function Navbar() {
             CleanMap
           </Link>
           
-          <div className="flex gap-6">
+          <div className="flex items-center gap-6">
             <Link 
               href="/map" 
               className="text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
@@ -31,6 +45,41 @@ export default function Navbar() {
             >
               Dashboard
             </Link>
+            
+            {!loading && (
+              <>
+                {user ? (
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href="/profile"
+                      className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
+                    >
+                      {profile?.firstName || profile?.email || 'Profile'}
+                    </Link>
+                    <Button
+                      onClick={handleSignOut}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Sign out
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Link href="/auth/login">
+                      <Button variant="ghost" size="sm">
+                        Sign in
+                      </Button>
+                    </Link>
+                    <Link href="/auth/sign-up">
+                      <Button size="sm">
+                        Sign up
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
