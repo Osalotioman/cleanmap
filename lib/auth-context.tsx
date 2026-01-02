@@ -11,6 +11,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from './supabase/client';
+import { validateEnv } from './env';
 import type { User } from '@supabase/supabase-js';
 
 /**
@@ -54,6 +55,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   useEffect(() => {
+    // Validate environment variables on client mount (runtime only)
+    if (typeof window !== 'undefined') {
+      try {
+        validateEnv();
+      } catch (error) {
+        console.error('Environment validation error:', error);
+      }
+    }
+
     // Get initial session
     const initAuth = async () => {
       try {
