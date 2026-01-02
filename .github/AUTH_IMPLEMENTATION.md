@@ -86,7 +86,7 @@ cleanmap/
 4. Server creates Prisma user profile with:
    - `id` matching Supabase user id
    - `passwordHash` set to `supabase:{id}` (placeholder)
-   - Default role: `"student"`
+   - Default role: `"anonymous"`
 5. Server returns success response
 6. User receives email verification (Supabase handles this)
 
@@ -135,7 +135,7 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String   // Format: "supabase:{supabase_user_id}"
-  role         String   @default("student")
+  role         String   @default("anonymous")
   status       String   @default("active")
   firstName    String?
   lastName     String?

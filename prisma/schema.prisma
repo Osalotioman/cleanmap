@@ -16,7 +16,7 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String   // Format: "supabase:{supabase_user_id}" (placeholder)
-  role         String   @default("student")
+  role         String   @default("anonymous")
   status       String   @default("active")
   firstName    String?
   lastName     String?

@@ -49,7 +49,7 @@ interface LoginRequest {
  *     "user": {
  *       "id": "uuid",
  *       "email": "user@example.com",
- *       "role": "student",
+ *       "role": "anonymous",
  *       "firstName": "John",
  *       "lastName": "Doe"
  *     },
@@ -119,7 +119,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           id: authData.user.id,
           email: email.toLowerCase(),
           passwordHash: `supabase:${authData.user.id}`,
-          role: 'student',
+          role: 'anonymous',
           status: 'active',
         },
         select: {

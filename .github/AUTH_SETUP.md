@@ -107,7 +107,7 @@ Expected response:
     "user": {
       "id": "uuid",
       "email": "test@example.com",
-      "role": "student",
+      "role": "anonymous",
       "status": "active",
       "firstName": "Test",
       "lastName": "User",
@@ -136,7 +136,7 @@ Expected response:
     "user": {
       "id": "uuid",
       "email": "test@example.com",
-      "role": "student",
+      "role": "anonymous",
       "status": "active",
       "firstName": "Test",
       "lastName": "User"

@@ -54,7 +54,7 @@ interface SignupRequest {
  *     "user": {
  *       "id": "uuid",
  *       "email": "user@example.com",
- *       "role": "student"
+ *       "role": "anonymous"
  *     }
  *   }
  * }
@@ -122,7 +122,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           id: authData.user.id,
           email: email.toLowerCase(),
           passwordHash: `supabase:${authData.user.id}`,
-          role: 'student',
+          role: 'anonymous',
           status: 'active',
           firstName: firstName || null,
           lastName: lastName || null,
