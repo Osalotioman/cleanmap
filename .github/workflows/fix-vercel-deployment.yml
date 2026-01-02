@@ -1,0 +1,44 @@
+name: Add Empty Commit if External Contributor
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  check-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get last commit author
+        id: get-author
+        run: |
+          AUTHOR=$(git log -1 --pretty=format:'%ae')
+          echo "LAST_COMMIT_AUTHOR=$AUTHOR" >> $GITHUB_ENV
+
+      - name: Add empty commit if not owner
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const lastCommitAuthor = process.env.LAST_COMMIT_AUTHOR;
+            const repoOwner = '${{ github.repository_owner }}';
+            const committerUsername = lastCommitAuthor.split('@')[0];
+            if (committerUsername !== repoOwner && committerUsername !== 'github-actions[bot]') {
+              await exec.exec('git config --global user.name "github-actions[bot]"');
+              await exec.exec('git config --global user.email "github-actions[bot]@users.noreply.github.com"');
+              await exec.exec('git commit --allow-empty -m "chore: empty commit to enable vercel deployment by external contributor"');
+              await exec.exec('git push');
+            } else {
+              console.log("No action needed. Commit was from the repo owner or the bot itself.");
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    permissions:
+      contents: write
+      actions: read
+      repository-projects: read
