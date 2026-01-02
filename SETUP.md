@@ -1,4 +1,4 @@
-# WasteWatch - Quick Start Guide
+# CleanMap - Quick Start Guide
 
 ## Project Scaffolding Complete ✅
 

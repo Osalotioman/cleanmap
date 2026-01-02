@@ -6,7 +6,7 @@ export default function Home() {
       <main className="flex w-full max-w-4xl flex-col items-center gap-12 py-16 px-8 bg-white dark:bg-black">
         <div className="flex flex-col items-center gap-6 text-center">
           <h1 className="text-5xl font-bold tracking-tight text-black dark:text-zinc-50">
-            WasteWatch
+            CleanMap
           </h1>
           <p className="max-w-2xl text-xl leading-8 text-zinc-600 dark:text-zinc-400">
             Report, track, and monitor waste management issues in your community in real-time.

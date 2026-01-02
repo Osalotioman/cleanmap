@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WasteWatch - Community Waste Management",
+  title: "CleanMap - Community Waste Management",
   description: "Report, track, and monitor waste management issues in real-time",
 };
 
