@@ -9,7 +9,8 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { env, isDevelopment } from './env';
+
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 /**
  * Prisma Client configuration with logging
@@ -17,11 +18,6 @@ import { env, isDevelopment } from './env';
 const prismaClientSingleton = () => {
   return new PrismaClient({
     log: isDevelopment ? ['query', 'error', 'warn'] : ['error'],
-    datasources: {
-      db: {
-        url: env.DATABASE_URL,
-      },
-    },
   });
 };
 

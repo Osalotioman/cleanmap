@@ -97,31 +97,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // Fetch or create user profile from Prisma
-    let user = await prisma.user.findUnique({
-      where: { id: authData.user.id },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        status: true,
-        firstName: true,
-        lastName: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    // If user doesn't exist in Prisma, create profile
-    // (This handles users created directly in Supabase)
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          id: authData.user.id,
-          email: email.toLowerCase(),
-          passwordHash: `supabase:${authData.user.id}`,
-          role: 'anonymous',
-          status: 'active',
-        },
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: authData.user.id },
         select: {
           id: true,
           email: true,
@@ -133,6 +112,36 @@ export async function POST(request: Request): Promise<NextResponse> {
           updatedAt: true,
         },
       });
+
+      // If user doesn't exist in Prisma, create profile
+      // (This handles users created directly in Supabase)
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            id: authData.user.id,
+            email: email.toLowerCase(),
+            passwordHash: `supabase:${authData.user.id}`,
+            role: 'anonymous',
+            status: 'active',
+          },
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            status: true,
+            firstName: true,
+            lastName: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+      }
+    } catch (dbError) {
+      console.error('Database error during login:', dbError);
+      return errorResponse(
+        'Unable to access user profile. Please try again later.',
+        503
+      );
     }
 
     // Check if user account is active

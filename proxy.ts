@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 /**
- * Middleware for authentication and route protection
+ * Proxy for authentication and route protection
  * 
  * Protected routes:
  * - /dashboard
@@ -11,12 +11,12 @@ import { createServerClient } from '@supabase/ssr';
  * - /report (requires auth)
  * 
  * Public routes:
- * - /login
- * - /signup
+ * - /auth/login
+ * - /auth/sign-up
  * - /map (public view)
  * - /
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -58,13 +58,13 @@ export async function middleware(request: NextRequest) {
   );
 
   // Auth routes - redirect to dashboard if already logged in
-  const authRoutes = ['/login', '/signup'];
+  const authRoutes = ['/auth/login', '/auth/sign-up'];
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
   // Redirect logic
   if (isProtectedRoute && !user) {
     // Redirect to login if trying to access protected route without auth
-    const redirectUrl = new URL('/login', request.url);
+    const redirectUrl = new URL('/auth/login', request.url);
     redirectUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(redirectUrl);
   }
@@ -84,9 +84,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
      * - api routes
+     * Feel free to modify this pattern to include more paths.
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
   ],
-};
+}

@@ -105,10 +105,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      if (!response.ok) {
+        let errorMessage = 'Login failed';
+        try {
+          const data = await response.json();
+          errorMessage = data.error || data.message || errorMessage;
+        } catch {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Login failed');
+      if (!data.success || !data.data) {
+        throw new Error(data.error || 'Invalid response from server');
       }
 
       // Store token and profile
@@ -120,6 +132,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.data.user);
     } catch (error) {
       console.error('Sign in error:', error);
+      // Provide user-friendly error messages
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -137,22 +153,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     setLoading(true);
     try {
+      // Basic client-side validation
+      if (!email || !password) {
+        throw new Error('Email and password are required');
+      }
+
+      if (password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, firstName, lastName }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Signup failed');
+      if (!response.ok) {
+        let errorMessage = 'Signup failed';
+        try {
+          const data = await response.json();
+          errorMessage = data.error || data.message || errorMessage;
+        } catch {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
-      // Note: User needs to verify email before they can sign in
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Invalid response from server');
+      }
+
       return data;
     } catch (error) {
       console.error('Sign up error:', error);
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -165,15 +203,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setLoading(true);
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      
+      // Clear local storage even if Supabase signout fails
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_profile');
       setToken(null);
       setProfile(null);
       setUser(null);
+
+      if (error) {
+        console.error('Supabase sign out error:', error);
+        // Don't throw error - user is logged out locally
+      }
     } catch (error) {
       console.error('Sign out error:', error);
-      throw error;
+      // Clear state anyway
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_profile');
+      setToken(null);
+      setProfile(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }

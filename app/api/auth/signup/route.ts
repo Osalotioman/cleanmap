@@ -87,12 +87,20 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // Check if user already exists in Prisma
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+    try {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
 
-    if (existingUser) {
-      return errorResponse('User with this email already exists', 409);
+      if (existingUser) {
+        return errorResponse('User with this email already exists', 409);
+      }
+    } catch (dbError) {
+      console.error('Database error checking existing user:', dbError);
+      return errorResponse(
+        'Unable to verify account availability. Please try again later.',
+        503
+      );
     }
 
     // Create Supabase Auth user
@@ -148,7 +156,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       await supabase.auth.admin.deleteUser(authData.user.id);
 
       console.error('Prisma user creation error:', prismaError);
-      return errorResponse('Failed to create user profile', 500);
+      return errorResponse(
+        'Unable to complete registration. Please try again later.',
+        503
+      );
     }
   } catch (error) {
     console.error('Signup error:', error);
