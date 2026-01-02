@@ -1,4 +1,4 @@
-# AI Coding Agent Principles for WasteWatch
+# AI Coding Agent Principles for CleanMap
 
 ## Project Focus
 - Build a **mobile-first PWA** for community waste management.

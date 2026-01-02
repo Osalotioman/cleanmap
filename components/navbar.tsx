@@ -9,7 +9,7 @@ export default function Navbar() {
             href="/" 
             className="text-xl font-bold text-black dark:text-zinc-50"
           >
-            WasteWatch
+            CleanMap
           </Link>
           
           <div className="flex gap-6">

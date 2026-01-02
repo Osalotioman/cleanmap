@@ -1,8 +1,8 @@
-# WasteWatch - Community Waste Management App
+# CleanMap - Community Waste Management App
 
 ## Overview
 
-**Product Name:** WasteWatch
+**Product Name:** CleanMap
 **Objective:** Enable residents and community volunteers to report, track, and monitor waste management issues in real time, improving visibility, accountability, and community engagement.  
 **Hackathon Goal:** Build a functional MVP in 10 days targeting the **Best Real-World Impact** award ($500) at Alameda Hacks.  
 **Target Platform:** Mobile-first web application (PWA), deployable via Vercel/Netlify.  

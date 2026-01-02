@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Map View | WasteWatch",
+  title: "Map View | CleanMap",
   description: "View all reported waste issues on the map",
 };
 

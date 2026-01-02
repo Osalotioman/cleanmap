@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dashboard | WasteWatch",
+  title: "Dashboard | CleanMap",
   description: "Manage waste reports and track community impact",
 };
 
