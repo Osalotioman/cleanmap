@@ -1,17 +1,17 @@
-name: Add Empty Commit if External Contributor
+name: Add Empty Commit via PR for External Contributor
 
 on:
   push:
     branches:
       - main
-      - dev
 
 jobs:
-  check-and-commit:
+  create-pr-and-merge:
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -19,28 +19,60 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Add empty commit if external contributor
+      - name: Determine if external contributor
+        id: check
+        run: |
+          if [[ "${{ github.actor }}" == "${{ github.repository_owner }}" ]] || \
+             [[ "${{ github.actor }}" == "github-actions[bot]" ]]; then
+            echo "external=false" >> $GITHUB_OUTPUT
+          else
+            echo "external=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if not external
+        if: steps.check.outputs.external != 'true'
+        run: echo "Not an external contributor. Exiting."
+
+      - name: Create branch with empty commit
+        if: steps.check.outputs.external == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="bot/empty-commit-${{ github.run_id }}"
+          git checkout -b "$BRANCH"
+
+          git commit --allow-empty -m "chore: empty commit to enable deployment for external contributor"
+          git push origin "$BRANCH"
+
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+        id: branch
+
+      - name: Create PR into main
+        if: steps.check.outputs.external == 'true'
+        id: pr
         uses: actions/github-script@v6
         with:
           script: |
-            const actor = context.actor;
-            const owner = context.repo.owner;
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: "${{ steps.branch.outputs.branch }}",
+              base: "main",
+              title: "chore: enable deployment for external contributor",
+              body: "Automated PR created by GitHub Actions to enable deployment."
+            });
 
-            // Skip owner and bot to avoid loops
-            if (actor === owner || actor === 'github-actions[bot]') {
-              console.log('No action needed: owner or bot push.');
-              return;
-            }
+            core.setOutput("pr_number", pr.number);
 
-            console.log('External contributor detected. Adding empty commit.');
-
-            await exec.exec('git config --global user.name "github-actions[bot]"');
-            await exec.exec('git config --global user.email "github-actions[bot]@users.noreply.github.com"');
-
-            await exec.exec(
-              'git commit --allow-empty -m "chore: empty commit to enable deployment for external contributor"'
-            );
-
-            await exec.exec('git push');
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Merge PR
+        if: steps.check.outputs.external == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number("${{ steps.pr.outputs.pr_number }}"),
+              merge_method: "merge"
+            });
