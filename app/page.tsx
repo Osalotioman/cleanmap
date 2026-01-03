@@ -7,7 +7,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card"
-import Footer from "../components/footer"
 
 export default function Home() {
   return (
