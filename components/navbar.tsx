@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/navigation-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 type Role = "anonymous" | "volunteer" | "organization"
 const role: Role = "anonymous"
