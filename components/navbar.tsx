@@ -1,88 +1,97 @@
-'use client';
+"use client"
 
-import Link from "next/link";
-import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
+import Link from "next/link"
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+} from "@/components/ui/navigation-menu"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Menu } from "lucide-react"
 
-export default function Navbar() {
-  const { user, profile, signOut, loading } = useAuth();
+type Role = "anonymous" | "volunteer" | "organization"
+const role: Role = "anonymous"
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
-  };
+const NAV_ITEMS: Record<
+  Role,
+  { label: string; href: string }[]
+> = {
+  anonymous: [
+    { label: "Home", href: "/" },
+    { label: "Report Issue", href: "/report" },
+    { label: "How It Works", href: "/how-it-works" },
+    { label: "Volunteer", href: "/volunteer" },
+    { label: "Sign In", href: "/login" },
+  ],
+  volunteer: [
+    { label: "Reports", href: "/volunteer/reports" },
+    { label: "Map", href: "/volunteer/map" },
+    { label: "Community", href: "/volunteer/community" },
+    { label: "Profile", href: "/profile" },
+  ],
+  organization: [
+    { label: "Issues", href: "/org/issues" },
+    { label: "Assignments", href: "/org/assignments" },
+    { label: "Analytics", href: "/org/analytics" },
+    { label: "Profile", href: "/profile" },
+  ],
+}
+
+export function Navbar() {
+  const items = NAV_ITEMS[role]
 
   return (
-    <nav className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <Link 
-            href="/" 
-            className="text-xl font-bold text-black dark:text-zinc-50"
-          >
-            CleanMap
-          </Link>
-          
-          <div className="flex items-center gap-6">
-            <Link 
-              href="/map" 
-              className="text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
-            >
-              Map
-            </Link>
-            <Link 
-              href="/report" 
-              className="text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
-            >
-              Report
-            </Link>
-            <Link 
-              href="/dashboard" 
-              className="text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
-            >
-              Dashboard
-            </Link>
-            
-            {!loading && (
-              <>
-                {user ? (
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href="/profile"
-                      className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
-                    >
-                      {profile?.firstName || profile?.email || 'Profile'}
-                    </Link>
-                    <Button
-                      onClick={handleSignOut}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Sign out
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <Link href="/auth/login">
-                      <Button variant="ghost" size="sm">
-                        Sign in
-                      </Button>
-                    </Link>
-                    <Link href="/auth/sign-up">
-                      <Button size="sm">
-                        Sign up
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+    <header className="w-full border-b bg-background">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+        {/* Logo */}
+        <Link href="/" className="text-lg font-bold">
+          CleanMap
+        </Link>
+
+        {/* Desktop Nav */}
+        <NavigationMenu className="hidden md:flex">
+          <NavigationMenuList className="gap-2">
+            {items.map((item) => (
+              <NavigationMenuItem key={item.label}>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={item.href}
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            ))}
+          </NavigationMenuList>
+        </NavigationMenu>
+
+        {/* Mobile Nav */}
+        <div className="md:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className="p-2 rounded-md hover:bg-muted">
+                <Menu className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
+
+            <SheetContent side="right" className="w-72 pt-10">
+              <nav className="flex flex-col gap-2">
+                {items.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="rounded-md px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
-    </nav>
-  );
+    </header>
+  )
 }
