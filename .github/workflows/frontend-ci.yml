@@ -30,20 +30,21 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Setup environment for build
+        run: |
+          # Copy .env.example as base for build-time variables
+          cp .env.example .env
+          # Next.js only needs NEXT_PUBLIC_* vars at build time (embedded in client bundle)
+          # All other vars are runtime-only and not needed for CI build
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm prisma:generate
 
       - name: Lint
         run: pnpm -s lint
 
       - name: Build
-        env:
-          # Placeholder values for CI build - actual values should be in deployment environment
-          NEXT_PUBLIC_SUPABASE_URL: 'https://placeholder.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTI4MDAsImV4cCI6MTk2MDc2ODgwMH0.placeholder'
-          SUPABASE_SERVICE_ROLE_KEY: 'placeholder-service-role-key-minimum-length-required-here'
-          SUPABASE_JWT_SECRET: 'placeholder-jwt-secret-for-build-process-only'
-          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db'
-          APP_JWT_SECRET: 'placeholder-app-jwt-secret-minimum-32-characters-long'
-          NODE_ENV: production
         run: pnpm -s build
