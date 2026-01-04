@@ -17,7 +17,7 @@ export default function VolunteerPage() {
       </ul>
 
       <Button asChild className="mt-8">
-        <Link href="/login">Sign Up / Sign In</Link>
+        <Link href="/auth/sign-up">Become a Volunteer</Link>
       </Button>
     </main>
   )

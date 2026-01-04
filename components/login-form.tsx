@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
@@ -23,6 +23,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
   const { signIn, loading } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,7 +50,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
     try {
       await signIn(trimmedEmail, trimmedPassword)
-      router.push('/dashboard')
+      const redirectUrl = searchParams.get('redirect')
+      router.push(redirectUrl || '/profile')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
       setError(errorMessage)

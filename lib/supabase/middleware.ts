@@ -38,14 +38,19 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
 
+  // Define public paths that don't require authentication
+  const publicPaths = ['/', '/report', '/how-it-works', '/volunteer']
+
   if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
+    !user && // If user is not logged in
+    !request.nextUrl.pathname.startsWith('/login') && // And not on the login page
+    !request.nextUrl.pathname.startsWith('/auth') && // And not on an auth-related path
+    !publicPaths.includes(request.nextUrl.pathname) // And not on a public path
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // Redirect to the login page, preserving the intended destination
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
+    url.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 

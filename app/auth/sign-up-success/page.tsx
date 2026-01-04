@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -16,11 +18,14 @@ export default function Page() {
               <CardTitle className="text-2xl">Thank you for signing up!</CardTitle>
               <CardDescription>Check your email to confirm</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="grid gap-4">
               <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. Please check your email to confirm your account
-                before signing in.
+                You&apos;ve successfully signed up. A confirmation link has been sent to your email address.
+                Please check your inbox (and spam/junk folder) to confirm your account before signing in.
               </p>
+              <Link href="/auth/login" className="w-full">
+                <Button className="w-full">Proceed to Login</Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
