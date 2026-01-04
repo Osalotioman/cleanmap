@@ -22,7 +22,7 @@ const NAV_ITEMS: Record<
     { label: "Report Issue", href: "/report" },
     { label: "How It Works", href: "/how-it-works" },
     { label: "Volunteer", href: "/volunteer" },
-    { label: "Sign In", href: "/login" },
+    { label: "Sign In", href: "/auth/login" },
   ],
   volunteer: [
     { label: "Reports", href: "/volunteer/reports" },
