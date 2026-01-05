@@ -1,5 +1,5 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -29,7 +29,7 @@ export async function updateSession(request: NextRequest) {
         },
       },
     }
-  );
+  )
 
   // Do not run code between createServerClient and
   // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
@@ -37,23 +37,23 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  const { data } = await supabase.auth.getClaims()
+  const user = data?.claims
 
   // Define public paths that don't require authentication
-  const publicPaths = ["/", "/report", "/how-it-works", "/volunteers"];
+  const publicPaths = ['/', '/report', '/how-it-works', '/volunteers']
 
   if (
     !user && // If user is not logged in
-    !request.nextUrl.pathname.startsWith("/login") && // And not on the login page
-    !request.nextUrl.pathname.startsWith("/auth") && // And not on an auth-related path
+    !request.nextUrl.pathname.startsWith('/login') && // And not on the login page
+    !request.nextUrl.pathname.startsWith('/auth') && // And not on an auth-related path
     !publicPaths.includes(request.nextUrl.pathname) // And not on a public path
   ) {
     // Redirect to the login page, preserving the intended destination
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/login'
+    url.searchParams.set('redirect', request.nextUrl.pathname)
+    return NextResponse.redirect(url)
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
@@ -69,5 +69,5 @@ export async function updateSession(request: NextRequest) {
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
 
-  return supabaseResponse;
+  return supabaseResponse
 }
