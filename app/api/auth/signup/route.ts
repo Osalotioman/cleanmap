@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import {
   errorResponse,
@@ -103,12 +103,23 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    // Create Supabase Auth user
-    const supabase = createAdminClient();
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Create Supabase Auth user with user-facing client so confirmation email is sent
+    const supabase = await createClient();
+    const adminClient = createAdminClient();
+    const requestUrl = new URL(request.url);
+    const origin = request.headers.get('origin') ?? `${requestUrl.protocol}//${requestUrl.host}`;
+    const emailRedirectTo = `${origin}/auth/confirm`;
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: email.toLowerCase(),
       password,
-      email_confirm: true, // Auto-confirm for development (set to false in production)
+      options: {
+        data: {
+          firstName,
+          lastName,
+        },
+        emailRedirectTo,
+      },
     });
 
     if (authError) {
@@ -153,7 +164,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     } catch (prismaError) {
       // Rollback: Delete Supabase user if Prisma creation fails
-      await supabase.auth.admin.deleteUser(authData.user.id);
+      await adminClient.auth.admin.deleteUser(authData.user.id);
 
       console.error('Prisma user creation error:', prismaError);
       return errorResponse(

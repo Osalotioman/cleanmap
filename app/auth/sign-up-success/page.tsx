@@ -15,16 +15,34 @@ export default function Page() {
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Thank you for signing up!</CardTitle>
-              <CardDescription>Check your email to confirm</CardDescription>
+              <CardTitle className="text-2xl">Check Your Email!</CardTitle>
+              <CardDescription>Confirmation email sent</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
-              <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. A confirmation link has been sent to your email address.
-                Please check your inbox (and spam/junk folder) to confirm your account before signing in.
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Thank you for signing up! We&apos;ve sent a confirmation link to your email address.
+                </p>
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 space-y-2">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    Next steps:
+                  </p>
+                  <ol className="text-sm text-blue-800 dark:text-blue-200 list-decimal list-inside space-y-1">
+                    <li>Check your email inbox</li>
+                    <li>Look for an email from CleanMap</li>
+                    <li>Click the confirmation link</li>
+                    <li>Return to login</li>
+                  </ol>
+                </div>
+                <div className="rounded-lg bg-yellow-50 dark:bg-yellow-950 p-3">
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                    <strong>Can&apos;t find the email?</strong> Check your spam or junk folder. 
+                    The email should arrive within a few minutes.
+                  </p>
+                </div>
+              </div>
               <Link href="/auth/login" className="w-full">
-                <Button className="w-full">Proceed to Login</Button>
+                <Button className="w-full">Go to Login</Button>
               </Link>
             </CardContent>
           </Card>

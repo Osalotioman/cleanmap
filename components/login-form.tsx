@@ -15,17 +15,27 @@ import { Label } from '@/components/ui/label'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const { signIn, loading } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Check for success messages from URL parameters
+  useEffect(() => {
+    if (searchParams.get('confirmed') === 'true') {
+      setSuccessMessage('Email confirmed successfully! You can now log in.')
+    } else if (searchParams.get('password_updated') === 'true') {
+      setSuccessMessage('Password updated successfully! You can now log in with your new password.')
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,6 +126,11 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                   </button>
                 </div>
               </div>
+              {successMessage && (
+                <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 text-sm text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+                  {successMessage}
+                </div>
+              )}
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading || loading}>
                 {isLoading || loading ? 'Logging in...' : 'Login'}
