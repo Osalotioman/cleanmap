@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -10,19 +11,25 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
 
-type Role = "anonymous" | "volunteer" | "organization"
-const role: Role = "anonymous"
+type Role = "not_logged_in" | "anonymous" | "volunteer" | "organization"
 
 const NAV_ITEMS: Record<
   Role,
   { label: string; href: string }[]
 > = {
+  not_logged_in: [
+    { label: "Home", href: "/" },
+    { label: "Report Issue", href: "/report" },
+    { label: "How It Works", href: "/how-it-works" },
+    { label: "Volunteer", href: "/volunteer" },
+    { label: "Login", href: "/auth/login" },
+  ],
   anonymous: [
     { label: "Home", href: "/" },
     { label: "Report Issue", href: "/report" },
     { label: "How It Works", href: "/how-it-works" },
     { label: "Volunteer", href: "/volunteer" },
-    { label: "Sign In", href: "/auth/login" },
+    { label: "Profile", href: "/profile" },
   ],
   volunteer: [
     { label: "Reports", href: "/volunteer/reports" },
@@ -39,6 +46,21 @@ const NAV_ITEMS: Record<
 }
 
 export function Navbar() {
+  const { user, profile, loading } = useAuth()
+  
+  // Determine role based on auth state
+  const role: Role = loading 
+    ? "not_logged_in" // Show default while loading
+    : !user || !profile
+    ? "not_logged_in"
+    : profile.role === "resident"
+    ? "anonymous"
+    : profile.role === "volunteer"
+    ? "volunteer"
+    : profile.role === "admin"
+    ? "organization"
+    : "anonymous" // fallback
+  
   const items = NAV_ITEMS[role]
 
   return (
