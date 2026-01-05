@@ -2,17 +2,26 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import MapPicker from "@/components/mappicker"
 import { getDeviceId } from "@/lib/rate-limiter"
 import {
   Tooltip,
-  TooltipProvider,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+
+// Dynamically import MapPicker to avoid SSR issues with Leaflet
+const MapPicker = dynamic(() => import("@/components/mappicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-96 w-full flex items-center justify-center bg-muted rounded-md">
+      <p className="text-muted-foreground">Loading map...</p>
+    </div>
+  ),
+})
 
 export default function ReportPage() {
   const router = useRouter()
@@ -164,7 +173,7 @@ export default function ReportPage() {
             <TooltipContent side="right" className="max-w-xs">
               <p>
                 Your location is detected automatically via GPS. You can override it by
-                clicking "Choose location on map" and selecting the correct spot. This
+                clicking &quot;Choose location on map&quot; and selecting the correct spot. This
                 ensures your report is accurate even if you moved after taking the photo.
               </p>
             </TooltipContent>

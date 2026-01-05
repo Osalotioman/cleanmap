@@ -21,7 +21,7 @@ const NAV_ITEMS: Record<
     { label: "Home", href: "/" },
     { label: "Report Issue", href: "/report" },
     { label: "How It Works", href: "/how-it-works" },
-    { label: "Volunteer", href: "/volunteer" },
+    { label: "Volunteer", href: "/volunteers" },
     { label: "Login", href: "/auth/login" },
   ],
   anonymous: [
@@ -29,7 +29,7 @@ const NAV_ITEMS: Record<
     { label: "Report Issue", href: "/report" },
     { label: "How It Works", href: "/how-it-works" },
     { label: "Public Map", href: "/map" },
-    { label: "Volunteer", href: "/volunteers" }, // Why is there an s here? TODO: Check
+    { label: "Volunteer", href: "/volunteer" }, // Why is there an s here? TODO: Check
     { label: "Profile", href: "/profile" },
   ],
   volunteer: [

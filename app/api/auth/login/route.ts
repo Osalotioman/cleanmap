@@ -91,9 +91,29 @@ export async function POST(request: Request): Promise<NextResponse> {
         password,
       });
 
-    if (authError || !authData.user) {
+    // Handle authentication errors
+    if (authError) {
       console.error('Supabase auth error:', authError);
+      
+      // Check if it's an email not confirmed error
+      if (authError.message.toLowerCase().includes('email not confirmed')) {
+        return errorResponse(
+          'Please verify your email address. Check your inbox for the verification link.',
+          403,
+          { 
+            needsEmailVerification: true,
+            email: email.toLowerCase(),
+            code: 'EMAIL_NOT_VERIFIED'
+          }
+        );
+      }
+      
+      // Generic authentication error (wrong password, user not found, etc.)
       return errorResponse('Invalid email or password', 401);
+    }
+
+    if (!authData.user) {
+      return errorResponse('Authentication failed', 401);
     }
 
     // Fetch or create user profile from Prisma

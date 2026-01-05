@@ -60,7 +60,29 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (error) {
       console.error("Supabase storage error:", error);
-      return errorResponse("Failed to upload image", 500);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
+        return errorResponse(
+          "Storage bucket 'report-images' not found. Please create it in Supabase Dashboard: Storage → Create bucket → Name: 'report-images' (public)",
+          500,
+          { bucketName: 'report-images', setupRequired: true }
+        );
+      }
+      
+      if (error.message?.includes('policy')) {
+        return errorResponse(
+          "Storage bucket policy error. Make sure anonymous uploads are allowed.",
+          500,
+          { error: error.message }
+        );
+      }
+      
+      return errorResponse(
+        `Failed to upload image: ${error.message || 'Unknown error'}`,
+        500,
+        { error: error.message }
+      );
     }
 
     // Get public URL
