@@ -3,6 +3,19 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar"
 import { AuthProvider } from "@/lib/auth-context";
+import { validateEnv } from "@/lib/env";
+
+// Validate server-side environment variables on app startup
+// This runs once on the server, not in the browser
+if (typeof window === 'undefined') {
+  try {
+    validateEnv();
+  } catch (error) {
+    console.error('Server environment validation failed:', error);
+    // In production, you might want to throw here to prevent app startup
+    // throw error;
+  }
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
