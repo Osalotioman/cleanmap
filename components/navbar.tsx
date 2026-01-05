@@ -21,7 +21,8 @@ const NAV_ITEMS: Record<
     { label: "Home", href: "/" },
     { label: "Report Issue", href: "/report" },
     { label: "How It Works", href: "/how-it-works" },
-    { label: "Volunteer", href: "/volunteer" },
+    { label: "Public Map", href: "/map" },
+    { label: "Volunteer", href: "/volunteers" },
     { label: "Sign In", href: "/auth/login" },
   ],
   volunteer: [

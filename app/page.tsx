@@ -25,7 +25,7 @@ export default function Home() {
             <Button size="lg">Report an Issue</Button>
           </Link>
 
-          <Link href="/volunteer">
+          <Link href="/volunteers">
             <Button size="lg" variant="outline">
               Become a Volunteer
             </Button>

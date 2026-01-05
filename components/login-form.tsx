@@ -51,7 +51,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     try {
       await signIn(trimmedEmail, trimmedPassword)
       const redirectUrl = searchParams.get('redirect')
-      router.push(redirectUrl || '/profile')
+      router.push(redirectUrl || '/volunteer')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
       setError(errorMessage)
