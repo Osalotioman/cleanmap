@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
 
 type Role = "anonymous" | "volunteer" | "organization"
-const role: Role = "anonymous"
+const role: Role = "volunteer"
 
 const NAV_ITEMS: Record<
   Role,
