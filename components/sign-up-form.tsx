@@ -12,20 +12,34 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Eye, EyeOff, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
 export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const { signUp, loading } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  // Real-time password validation
+  const passwordRequirements = useMemo(() => {
+    return {
+      minLength: password.length >= 8,
+      hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      passwordsMatch: password.length > 0 && password === repeatPassword,
+    }
+  }, [password, repeatPassword])
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -171,25 +185,90 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                
+                {/* Password Requirements */}
+                {password.length > 0 && (
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    <p className="font-medium text-muted-foreground">Password must contain:</p>
+                    <div className="space-y-1">
+                      <PasswordRequirement
+                        met={passwordRequirements.minLength}
+                        text="At least 8 characters"
+                      />
+                      <PasswordRequirement
+                        met={passwordRequirements.hasUppercase}
+                        text="One uppercase letter"
+                      />
+                      <PasswordRequirement
+                        met={passwordRequirements.hasLowercase}
+                        text="One lowercase letter"
+                      />
+                      <PasswordRequirement
+                        met={passwordRequirements.hasNumber}
+                        text="One number"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="repeat-password">Repeat Password</Label>
                 </div>
-                <Input
-                  id="repeat-password"
-                  type="password"
-                  required
-                  value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="repeat-password"
+                    type={showRepeatPassword ? "text" : "password"}
+                    required
+                    value={repeatPassword}
+                    onChange={(e) => setRepeatPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showRepeatPassword ? "Hide password" : "Show password"}
+                  >
+                    {showRepeatPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                
+                {/* Password Match Indicator */}
+                {repeatPassword.length > 0 && (
+                  <div className="mt-2">
+                    <PasswordRequirement
+                      met={passwordRequirements.passwordsMatch}
+                      text="Passwords match"
+                    />
+                  </div>
+                )}
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading || loading}>
@@ -205,6 +284,25 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
           </form>
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+// Password requirement indicator component
+function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      {met ? (
+        <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-500 shrink-0" />
+      ) : (
+        <X className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+      )}
+      <span className={cn(
+        "text-xs",
+        met ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
+      )}>
+        {text}
+      </span>
     </div>
   )
 }
