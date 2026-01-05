@@ -48,7 +48,6 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
 
     // Trim inputs
     const trimmedEmail = email.trim()
-    const trimmedPassword = password.trim()
     const trimmedFirstName = firstName.trim()
     const trimmedLastName = lastName.trim()
 
@@ -75,25 +74,25 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     }
 
     // Password validation
-    if (trimmedPassword.length < 8) {
+    if (password.length < 8) {
       setError('Password must be at least 8 characters long')
       setIsLoading(false)
       return
     }
 
-    if (!/[A-Z]/.test(trimmedPassword)) {
+    if (!/[A-Z]/.test(password)) {
       setError('Password must contain at least one uppercase letter')
       setIsLoading(false)
       return
     }
 
-    if (!/[a-z]/.test(trimmedPassword)) {
+    if (!/[a-z]/.test(password)) {
       setError('Password must contain at least one lowercase letter')
       setIsLoading(false)
       return
     }
 
-    if (!/[0-9]/.test(trimmedPassword)) {
+    if (!/[0-9]/.test(password)) {
       setError('Password must contain at least one number')
       setIsLoading(false)
       return
@@ -106,29 +105,8 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     }
 
     try {
-      // 1. Create the user in Supabase Auth
-      await signUp(trimmedEmail, trimmedPassword, trimmedFirstName, trimmedLastName)
+      await signUp(trimmedEmail, password, trimmedFirstName, trimmedLastName)
 
-      // 2. Sign in to create a session
-      await signIn(trimmedEmail, trimmedPassword)
-
-      // 3. Create the volunteer profile in our database (now authenticated)
-      const volunteerResponse = await fetch('/api/volunteer/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: `${trimmedFirstName} ${trimmedLastName}`,
-        }),
-      });
-
-      if (!volunteerResponse.ok) {
-        // This is a soft failure. The auth user exists, but the profile failed.
-        // For now, we'll log the error and redirect. A more robust solution
-        // might involve a dedicated "complete your profile" page.
-        console.error("Failed to create volunteer profile:", await volunteerResponse.json());
-      }
-      
-      // 4. Redirect on success
       router.push('/auth/sign-up-success')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
