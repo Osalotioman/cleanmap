@@ -1,7 +1,14 @@
+"use client"
+
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function ThankYouPage() {
+  const searchParams = useSearchParams()
+  const reportId = searchParams.get("id")
+
   return (
     <main className="mx-auto max-w-xl px-4 py-24 text-center">
       <h1 className="text-3xl font-bold">Thank You 🙌</h1>
@@ -10,9 +17,31 @@ export default function ThankYouPage() {
         it shortly.
       </p>
 
+      {reportId && (
+        <Card className="mt-8 text-left">
+          <CardHeader>
+            <CardTitle>Track Your Report</CardTitle>
+            <CardDescription>
+              You can check the status of your submission any time using the
+              link below.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border bg-muted px-4 py-2 text-sm">
+              <Link
+                href={`/issue/${reportId}`}
+                className="font-mono break-all text-blue-600 hover:underline"
+              >
+                {`${window.location.origin}/issue/${reportId}`}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
         <Button asChild>
-          <Link href="/volunteer">Become a Volunteer</Link>
+          <Link href="/volunteers">Become a Volunteer</Link>
         </Button>
         <Button asChild variant="outline">
           <Link href="/">Back to Home</Link>

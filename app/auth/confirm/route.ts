@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
   const _next = searchParams.get('next')
-  const next = _next?.startsWith('/') ? _next : '/'
 
   if (token_hash && type) {
     const supabase = await createClient()
@@ -17,15 +16,29 @@ export async function GET(request: NextRequest) {
       type,
       token_hash,
     })
+    
     if (!error) {
-      // redirect user to specified redirect URL or root of app
-      redirect(next)
+      // Handle different verification types
+      if (type === 'email') {
+        // Email confirmation - redirect to login with success message
+        redirect('/auth/login?confirmed=true')
+      } else if (type === 'recovery') {
+        // Password reset - redirect to update password page
+        redirect('/auth/update-password')
+      } else if (_next && _next.startsWith('/')) {
+        // Custom redirect if provided
+        redirect(_next)
+      } else {
+        // Default to profile/dashboard
+        redirect('/profile')
+      }
     } else {
-      // redirect the user to an error page with some instructions
-      redirect(`/auth/error?error=${error?.message}`)
+      // redirect the user to an error page with error message
+      const errorMessage = encodeURIComponent(error?.message || 'Verification failed')
+      redirect(`/auth/error?error=${errorMessage}`)
     }
   }
 
-  // redirect the user to an error page with some instructions
-  redirect(`/auth/error?error=No token hash or type`)
+  // redirect the user to an error page with instructions
+  redirect(`/auth/error?error=Invalid verification link. Please request a new one.`)
 }

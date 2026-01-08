@@ -52,18 +52,61 @@ export default function ReportPage() {
 
     setSubmitting(true)
 
-    const data = {
-      title: (e.currentTarget as any).title.value,
-      description: (e.currentTarget as any).description.value,
-      coords,
-      images,
-    }
+    try {
+      let imageUrl: string | null = null
 
-    console.log("Submitted:", data)
-    setTimeout(() => {
+      // 1. Upload image if one exists
+      if (images.length > 0) {
+        const image = images[0]
+        const formData = new FormData()
+        formData.append("file", image)
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!uploadRes.ok) {
+          throw new Error("Failed to upload image.")
+        }
+        const uploadData = await uploadRes.json()
+        imageUrl = uploadData.data.url
+      }
+
+      // 2. Get Device ID
+      const deviceId = getDeviceId()
+
+      // 3. Submit report
+      const reportData = {
+        latitude: coords[0],
+        longitude: coords[1],
+        description: `${title}${description ? ` - ${description}` : ''}`, // Combine title and description
+        imageUrl,
+        deviceId,
+      }
+
+      const reportRes = await fetch("/api/reports/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reportData),
+      })
+
+      if (!reportRes.ok) {
+        const errorData = await reportRes.json()
+        throw new Error(errorData.error || "Failed to submit report.")
+      }
+
+      const newReport = await reportRes.json()
+      const reportId = newReport.data.report.id
+
+      // 4. Redirect to thank you page
+      router.push(`/report/thank-you?id=${reportId}`)
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred."
+      alert(`Error: ${errorMessage}`)
       setSubmitting(false)
-      alert("Report submitted! Thank you.")
-    }, 1000)
+    }
   }
 
   return (
@@ -77,7 +120,12 @@ export default function ReportPage() {
         {/* Title */}
         <div className="space-y-1">
           <label className="text-sm font-medium">Issue Title</label>
-          <Input name="title" placeholder="Overflowing trash, illegal dumping..." />
+          <Input
+            name="title"
+            placeholder="Overflowing trash, illegal dumping..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </div>
 
         {/* Description */}
@@ -87,6 +135,8 @@ export default function ReportPage() {
             name="description"
             placeholder="Optional details that may help volunteers or authorities"
             rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
         </div>
 
@@ -104,7 +154,7 @@ export default function ReportPage() {
             <TooltipContent side="right" className="max-w-xs">
               <p>
                 Your location is detected automatically via GPS. You can override it by
-                clicking "Choose location on map" and selecting the correct spot. This
+                clicking &quot;Choose location on map&quot; and selecting the correct spot. This
                 ensures your report is accurate even if you moved after taking the photo.
               </p>
             </TooltipContent>

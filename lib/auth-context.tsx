@@ -11,7 +11,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from './supabase/client';
-import { validateEnv } from './env';
 import type { User } from '@supabase/supabase-js';
 
 /**
@@ -55,12 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   useEffect(() => {
-    // Validate environment variables on client mount (runtime only)
+    // Validate only client-side (NEXT_PUBLIC_*) environment variables
     if (typeof window !== 'undefined') {
-      try {
-        validateEnv();
-      } catch (error) {
-        console.error('Environment validation error:', error);
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.error(
+          'Missing required environment variables:\n',
+          '- NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✓' : '✗',
+          '\n- NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓' : '✗'
+        );
       }
     }
 
