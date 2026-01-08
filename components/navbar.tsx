@@ -35,7 +35,7 @@ const NAV_ITEMS: Record<
   volunteer: [
     { label: "Reports", href: "/volunteer/reports" },
     { label: "Map", href: "/volunteer/map" },
-    { label: "Community", href: "/volunteer/community" },
+    { label: "Communities", href: "/volunteer/my-communities" },
     { label: "Profile", href: "/profile" },
   ],
   organization: [

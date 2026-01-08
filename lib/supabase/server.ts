@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { NextRequest } from 'next/server'
 
 /**
  * If using Fluid compute: Don't put this client in a global variable. Always create a new client within each
@@ -50,4 +51,39 @@ export function createAdminClient() {
       }
     }
   )
+}
+
+/**
+ * Retrieves the authenticated user from a request.
+ * Extracts the user from the Supabase session stored in cookies.
+ * 
+ * @param request - Next.js Request object
+ * @returns Authenticated user object or null if not authenticated
+ */
+export async function getAuthUser(request: NextRequest) {
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Ignored - called from Server Component
+          }
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
 }

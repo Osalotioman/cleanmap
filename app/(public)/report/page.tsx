@@ -1,32 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { getDeviceId } from "@/lib/rate-limiter"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-
-// Dynamically import MapPicker to avoid SSR issues with Leaflet
-const MapPicker = dynamic(() => import("@/components/mappicker"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-96 w-full flex items-center justify-center bg-muted rounded-md">
-      <p className="text-muted-foreground">Loading map...</p>
-    </div>
-  ),
-})
+import MapPicker from "@/components/mappicker"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function ReportPage() {
-  const router = useRouter()
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
   const [images, setImages] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [coords, setCoords] = useState<[number, number] | null>(null)
@@ -64,9 +45,9 @@ export default function ReportPage() {
     }
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // The PRD says images are optional, so we'll allow submissions without them.
+    if (!images.length) return alert("Please add at least one photo.")
     if (!coords) return alert("Please select a location.")
 
     setSubmitting(true)

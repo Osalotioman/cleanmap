@@ -1,248 +1,316 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CommunityCard } from '@/components/community-card';
-import { useLocation } from '@/lib/hooks/use-location';
-import { useCommunities } from '@/lib/hooks/use-communities';
-import { Loader2, AlertCircle, Plus, Search } from 'lucide-react';
+import { useEffect, useState, useMemo } from "react"
+import Link from "next/link"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Loader2, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
+import { CommunityWithStatus } from "@/types/community"
 
-export default function CommunitiesListPage() {
-  const router = useRouter();
-  const location = useLocation();
-  const { communities, loading, error, refetch } = useCommunities(
-    location.latitude,
-    location.longitude
-  );
+type StatusFilter = "all" | "active" | "inactive"
+type CoverageFilter = "all" | "neighborhood" | "district" | "city"
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [joiningId, setJoiningId] = useState<string | null>(null);
+export default function CommunitiesPage() {
+  const [communities, setCommunities] = useState<CommunityWithStatus[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const [location, setLocation] = useState("")
+  const [coverage, setCoverage] = useState<CoverageFilter>("all")
+  const [search, setSearch] = useState("")
+  
+  const [joinRequestLoading, setJoinRequestLoading] = useState<string | null>(null)
 
-  // Filter communities
-  const myCommunities = communities.filter(c => c.isMember);
-  const availableCommunities = communities.filter(c => !c.isMember);
+  // Fetch communities
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        setLoading(true)
+        setError(null)
 
-  // Apply search filter
-  const filteredMyCommunities = myCommunities.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredAvailableCommunities = availableCommunities.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+        const params = new URLSearchParams()
+        if (location) params.append("location", location)
+        if (coverage !== "all") params.append("coverageType", coverage)
+        if (search) params.append("search", search)
 
-  const handleJoinCommunity = async (communityId: string) => {
-    setJoiningId(communityId);
+        const response = await fetch(`/api/community/list?${params.toString()}`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch communities")
+        }
+
+        setCommunities(data.data.communities)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to load communities"
+        setError(message)
+        toast.error(message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Debounce search
+    const timer = setTimeout(() => {
+      fetchCommunities()
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [location, coverage, search])
+
+  const uniqueLocations = useMemo(
+    () => Array.from(new Set(communities.map((c) => c.location))).sort(),
+    [communities]
+  )
+
+  const handleJoinRequest = async (communityId: string) => {
     try {
-      const response = await fetch(`/api/communities/${communityId}/join`, {
-        method: 'POST',
-      });
+      setJoinRequestLoading(communityId)
+
+      const response = await fetch("/api/community/join-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ communityId }),
+      })
+
+      const data = await response.json()
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to join community');
+        toast.error(data.error || "Failed to send join request")
+        return
       }
 
-      // Refetch communities to update membership status
-      await refetch();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to join community');
-    } finally {
-      setJoiningId(null);
-    }
-  };
+      toast.success("Join request sent! Awaiting response from moderators.")
 
-  if (location.loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <p>Detecting your location...</p>
-        </div>
-      </div>
-    );
+      // Update community status in list
+      setCommunities((prev) =>
+        prev.map((c) =>
+          c.id === communityId
+            ? {
+                ...c,
+                hasJoinRequest: true,
+                joinRequestStatus: "pending",
+                userJoinRequest: data.data.joinRequest,
+              }
+            : c
+        )
+      )
+    } catch (err) {
+      toast.error("An error occurred while sending join request")
+    } finally {
+      setJoinRequestLoading(null)
+    }
   }
 
-  if (location.error) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          {location.error}. Please enable location services to view communities.
-        </AlertDescription>
-      </Alert>
-    );
+  const handleCancelRequest = async (requestId: string, communityId: string) => {
+    try {
+      setJoinRequestLoading(communityId)
+
+      const response = await fetch(`/api/community/join-request/${requestId}`, {
+        method: "DELETE",
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error(data.error || "Failed to cancel join request")
+        return
+      }
+
+      toast.success("Join request cancelled")
+
+      // Update community status in list
+      setCommunities((prev) =>
+        prev.map((c) =>
+          c.id === communityId
+            ? {
+                ...c,
+                hasJoinRequest: false,
+                joinRequestStatus: null,
+                userJoinRequest: null,
+              }
+            : c
+        )
+      )
+    } catch (err) {
+      toast.error("An error occurred while cancelling join request")
+    } finally {
+      setJoinRequestLoading(null)
+    }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <main className="mx-auto max-w-5xl px-4 py-16 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Communities</h1>
-          <p className="text-muted-foreground mt-2">
-            Join or create communities to organize cleanups
-          </p>
-        </div>
-        <Button onClick={() => router.push('/volunteer/communities/create')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Community
+        <h1 className="text-3xl font-bold">Discover Communities</h1>
+
+        <Button asChild variant="outline">
+          <Link href="/volunteer/my-communities">
+            My Communities
+          </Link>
         </Button>
       </div>
 
-      {/* Search & Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search communities..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Search */}
+      <Input
+        placeholder="Search communities..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="max-w-xs"
+      />
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Communities</CardDescription>
-            <CardTitle className="text-2xl">{communities.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>My Communities</CardDescription>
-            <CardTitle className="text-2xl">{myCommunities.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Available to Join</CardDescription>
-            <CardTitle className="text-2xl">{availableCommunities.length}</CardTitle>
-          </CardHeader>
-        </Card>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4">
+        <Select value={location} onValueChange={setLocation}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All locations" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All locations</SelectItem>
+            {uniqueLocations.map((loc) => (
+              <SelectItem key={loc} value={loc}>
+                {loc}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={coverage}
+          onValueChange={(v) => setCoverage(v as CoverageFilter)}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Coverage type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All coverage types</SelectItem>
+            <SelectItem value="neighborhood">Neighborhood</SelectItem>
+            <SelectItem value="district">District</SelectItem>
+            <SelectItem value="city">City-wide</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Communities Tabs */}
-      {loading ? (
+      {/* Loading State */}
+      {loading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : error ? (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : (
-        <Tabs defaultValue="my-communities" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="my-communities">
-              My Communities ({filteredMyCommunities.length})
-            </TabsTrigger>
-            <TabsTrigger value="available">
-              Available ({filteredAvailableCommunities.length})
-            </TabsTrigger>
-          </TabsList>
-
-          {/* My Communities Tab */}
-          <TabsContent value="my-communities" className="space-y-4">
-            {filteredMyCommunities.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground text-center mb-4">
-                    {searchQuery
-                      ? 'No communities match your search.'
-                      : "You haven't joined any communities yet."}
-                  </p>
-                  {!searchQuery && (
-                    <div className="flex gap-2">
-                      <Button onClick={() => router.push('/volunteer/communities/create')}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Community
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const tabTrigger = document.querySelector('[value="available"]') as HTMLElement;
-                          tabTrigger?.click();
-                        }}
-                      >
-                        Browse Available
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredMyCommunities.map((community) => (
-                  <CommunityCard
-                    key={community.id}
-                    community={community}
-                    onClick={() => router.push(`/volunteer/communities/${community.id}`)}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Available Communities Tab */}
-          <TabsContent value="available" className="space-y-4">
-            {filteredAvailableCommunities.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground text-center mb-4">
-                    {searchQuery
-                      ? 'No communities match your search.'
-                      : 'No communities available in your area.'}
-                  </p>
-                  {!searchQuery && (
-                    <Button onClick={() => router.push('/volunteer/communities/create')}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create the First Community
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredAvailableCommunities.map((community) => (
-                  <CommunityCard
-                    key={community.id}
-                    community={community}
-                    onClick={() => router.push(`/volunteer/communities/${community.id}`)}
-                    onJoin={() => handleJoinCommunity(community.id)}
-                    isLoading={joiningId === community.id}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
       )}
 
-      {/* Info Card */}
-      <Card className="border-primary/50">
-        <CardHeader>
-          <CardTitle className="text-lg">How Communities Work</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>• Communities have a 2km radius around their center point</p>
-          <p>• You can only join communities in your current state</p>
-          <p>• Create a new community if none exist within 2km of your location</p>
-          <p>• Join communities to see reports and organize cleanups in that area</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+      {/* Error State */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <div>
+            <p className="font-medium text-red-900">Error loading communities</p>
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && communities.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No communities found. Try adjusting your filters.</p>
+        </div>
+      )}
+
+      {/* Communities List */}
+      {!loading && !error && communities.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {communities.map((c) => (
+            <Card key={c.id}>
+              <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                  <span className="line-clamp-2">{c.name}</span>
+                  {c.isMember && <Badge>Joined</Badge>}
+                  {c.hasJoinRequest && <Badge variant="secondary">Pending</Badge>}
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {c.location} • {c.coverageType}
+                  </p>
+                  {c.description && (
+                    <p className="text-sm line-clamp-2">{c.description}</p>
+                  )}
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  {c.memberCount} member{c.memberCount !== 1 ? "s" : ""}
+                </p>
+
+                {c.isMember ? (
+                  <Button asChild size="sm" className="w-full">
+                    <Link href={`/volunteer/my-communities/${c.id}`}>
+                      Open community
+                    </Link>
+                  </Button>
+                ) : c.hasJoinRequest ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleCancelRequest(c.userJoinRequest!.id, c.id)}
+                    disabled={joinRequestLoading === c.id}
+                  >
+                    {joinRequestLoading === c.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cancelling...
+                      </>
+                    ) : (
+                      "Cancel request"
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => handleJoinRequest(c.id)}
+                    disabled={joinRequestLoading === c.id}
+                  >
+                    {joinRequestLoading === c.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      "Send join request"
+                    )}
+                  </Button>
+                )}
+
+                <Button asChild variant="ghost" size="sm" className="w-full">
+                  <Link href={`/volunteer/communities/${c.id}`}>
+                    View details
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </main>
+  )
 }
