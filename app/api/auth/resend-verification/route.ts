@@ -66,9 +66,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // Get origin for redirect URL
-    const requestUrl = new URL(request.url);
-    const origin = request.headers.get('origin') ?? `${requestUrl.protocol}//${requestUrl.host}`;
-    const emailRedirectTo = `${origin}/auth/confirm`;
+    const emailRedirectTo = `${process.env.FRONTEND_URL}/auth/confirm`;
 
     console.log('📧 Resending verification email to:', email.toLowerCase());
     console.log('🔗 Redirect URL:', emailRedirectTo);

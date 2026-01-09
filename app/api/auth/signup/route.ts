@@ -106,9 +106,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     // Create Supabase Auth user with user-facing client so confirmation email is sent
     const supabase = await createClient();
     const adminClient = createAdminClient();
-    const requestUrl = new URL(request.url);
-    const origin = request.headers.get('origin') ?? `${requestUrl.protocol}//${requestUrl.host}`;
-    const emailRedirectTo = `${origin}/auth/confirm`;
+    const emailRedirectTo = `${process.env.FRONTEND_URL}/auth/confirm`;
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: email.toLowerCase(),
@@ -141,7 +139,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           id: authData.user.id,
           email: email.toLowerCase(),
           passwordHash: `supabase:${authData.user.id}`,
-          role: 'anonymous',
+          role: 'volunteer',
           status: 'active',
           firstName: firstName || null,
           lastName: lastName || null,
