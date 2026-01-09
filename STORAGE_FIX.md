@@ -6,16 +6,9 @@ Getting "Failed to upload image" error when submitting reports.
 ## Root Cause
 The Supabase storage bucket `report-images` is not configured yet.
 
-## Solution (3 Steps)
+## Solution (2 Steps)
 
-### Step 1: View Setup Instructions
-```bash
-./scripts/setup-storage.sh
-```
-
-This will display complete setup instructions for Supabase.
-
-### Step 2: Create Bucket in Supabase
+### Step 1: Create Bucket in Supabase
 
 1. **Go to Supabase Dashboard:**
    - https://app.supabase.com/project/YOUR_PROJECT/storage/buckets
@@ -24,38 +17,28 @@ This will display complete setup instructions for Supabase.
 
 3. **Configure:**
    - Name: `report-images`
-   - **Public bucket: ✅ MUST BE CHECKED**
+   - **Public bucket: ✅ CHECK THIS** (allows public URL access to view images)
    - File size limit: 5MB (optional)
    - Click "Create bucket"
 
-### Step 3: Add Storage Policies
+### Step 2: Verify Service Role Key
 
-#### Option A: Quick SQL (Copy & Paste)
+Make sure your `.env.local` file has the service role key:
 
-Go to SQL Editor and run:
-
-```sql
--- Allow anonymous uploads (for report submissions)
-CREATE POLICY "Allow anonymous uploads"
-ON storage.objects FOR INSERT
-TO anon
-WITH CHECK (bucket_id = 'report-images');
-
--- Allow public reads (to view images)
-CREATE POLICY "Allow public reads"
-ON storage.objects FOR SELECT
-TO anon, authenticated
-USING (bucket_id = 'report-images');
+```env
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 ```
 
-#### Option B: Via UI
+You can find this in: Supabase Dashboard → Project Settings → API → `service_role` key (secret)
 
-1. Go to: Storage → Policies
-2. Select bucket: `report-images`
-3. Click "New policy"
-4. Use templates:
-   - "Allow public read access"
-   - "Allow insert access to authenticated users"
+**Important:** The backend uses the service role key to upload files, bypassing RLS policies. No storage policies needed!
+
+## How It Works
+
+- ✅ **Backend handles uploads:** The `/api/upload` endpoint uses `SUPABASE_SERVICE_ROLE_KEY` 
+- ✅ **No RLS policies needed:** Service role bypasses all Row Level Security
+- ✅ **Public bucket:** Allows anyone to view uploaded images via public URL
+- ✅ **Secure:** Only your backend can upload files (not exposed to client)
 
 ## Verify Setup
 

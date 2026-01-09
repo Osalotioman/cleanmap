@@ -1,18 +1,39 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import MapPicker from "@/components/mappicker"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
+// Dynamically import MapPicker to avoid SSR issues with Leaflet
+const MapPicker = dynamic(() => import("@/components/mappicker"), {
+  ssr: false,
+  loading: () => <div className="h-96 bg-muted animate-pulse rounded-md" />,
+})
+
+// Generate or retrieve device ID for rate limiting
+function getDeviceId(): string {
+  const key = 'cleanmap_device_id'
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = `device_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+    localStorage.setItem(key, id)
+  }
+  return id
+}
+
 export default function ReportPage() {
+  const router = useRouter()
   const [images, setImages] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [coords, setCoords] = useState<[number, number] | null>(null)
   const [showMap, setShowMap] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
 
   // --- Image previews ---
   useEffect(() => {
@@ -45,7 +66,7 @@ export default function ReportPage() {
     }
   }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!images.length) return alert("Please add at least one photo.")
     if (!coords) return alert("Please select a location.")
