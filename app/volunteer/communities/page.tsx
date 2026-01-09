@@ -36,7 +36,7 @@ export default function CommunitiesPage() {
   const [error, setError] = useState<string | null>(null)
   
   // With the current geo-circle schema, `state` is the main filterable location field.
-  const [stateFilter, setStateFilter] = useState("")
+  const [stateFilter, setStateFilter] = useState("all")
   const [search, setSearch] = useState("")
   
   const [joinLoading, setJoinLoading] = useState<string | null>(null)
@@ -49,7 +49,7 @@ export default function CommunitiesPage() {
         setError(null)
 
         const params = new URLSearchParams()
-  if (stateFilter) params.append("state", stateFilter)
+  if (stateFilter && stateFilter !== "all") params.append("state", stateFilter)
         if (search) params.append("search", search)
 
         const response = await fetch(`/api/communities/list?${params.toString()}`)
@@ -143,7 +143,7 @@ export default function CommunitiesPage() {
             <SelectValue placeholder="All locations" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All locations</SelectItem>
+            <SelectItem value="all">All locations</SelectItem>
             {uniqueLocations.map((loc) => (
               <SelectItem key={loc} value={loc}>
                 {loc}
