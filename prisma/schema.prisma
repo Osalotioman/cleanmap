@@ -1,21 +1,19 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = []
 }
 
-/// User model - Stores user profile data
-/// The id matches the Supabase Auth user id for easy lookups
+/// User model - Base authentication
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
-  passwordHash String   // Format: "supabase:{supabase_user_id}" (placeholder)
+  passwordHash String
   role         String   @default("anonymous")
   status       String   @default("active")
   firstName    String?
@@ -23,42 +21,197 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // Relations for waste reports (future)
-  // wasteReports WasteReport[]
-  // upvotes      ReportUpvote[]
+  // Relations
+  volunteerId         String?                @unique
+  volunteer           Volunteer?             @relation(fields: [volunteerId], references: [id])
+  communityDiscussions CommunityDiscussion[]
 
   @@map("users")
 }
 
-// Future models for CleanMap features:
+/// Volunteer profile - Extended user with community features
+model Volunteer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
 
-// model WasteReport {
-//   id          String   @id @default(uuid())
-//   userId      String
-//   type        String   // "plastic", "organic", "metal", etc.
-//   status      String   @default("reported") // "reported", "acknowledged", "cleaned"
-//   latitude    Float
-//   longitude   Float
-//   description String?
-//   photoUrl    String?
-//   createdAt   DateTime @default(now())
-//   updatedAt   DateTime @updatedAt
-//   
-//   user        User     @relation(fields: [userId], references: [id])
-//   upvotes     ReportUpvote[]
-//   
-//   @@map("waste_reports")
-// }
+  // Relations
+  user               User?
+  createdCommunities Community[]              @relation("CommunityCreator")
+  communityMembers   CommunityMember[]
+  ledEvents          CleanupEvent[]           @relation("EventLeader")
+  eventAttendees     EventAttendee[]
+  comments           Comment[]
+  claimedIssues      CommunityClaimedIssue[]  @relation("ClaimedIssues")
 
-// model ReportUpvote {
-//   id        String   @id @default(uuid())
-//   userId    String
-//   reportId  String
-//   createdAt DateTime @default(now())
-//   
-//   user      User        @relation(fields: [userId], references: [id])
-//   report    WasteReport @relation(fields: [reportId], references: [id])
-//   
-//   @@unique([userId, reportId])
-//   @@map("report_upvotes")
-// }
+  @@map("volunteers")
+}
+
+/// Waste reports - Can be submitted anonymously
+model Report {
+  id          String   @id @default(uuid())
+  // Location stored as PostGIS geography point (lat/lon)
+  latitude    Float
+  longitude   Float
+  description String?
+  imageUrl    String?
+  deviceId    String // For rate limiting anonymous reports
+  status      String   @default("pending") // pending | scheduled | cleaned
+  createdAt   DateTime @default(now())
+
+  // Relations
+  events   CleanupEvent[]
+  comments Comment[]
+
+  @@index([deviceId, createdAt]) // For rate limit queries
+  @@index([status]) // For filtering
+  @@map("reports")
+}
+
+/// Communities - Geographic circles for volunteer coordination
+model Community {
+  id        String   @id @default(uuid())
+  name      String
+  state     String // From Nominatim API
+  centerLat Float // Center point latitude
+  centerLon Float // Center point longitude
+  radius    Int      @default(2000) // meters
+  createdBy String
+  ownerId   String? // Owner of the community (can be different from creator)
+  createdAt DateTime @default(now())
+
+  // Relations
+  creator       Volunteer               @relation("CommunityCreator", fields: [createdBy], references: [id])
+  members       CommunityMember[]
+  events        CleanupEvent[]
+  claimedIssues CommunityClaimedIssue[]
+  joinRequests  CommunityJoinRequest[]
+  discussions   CommunityDiscussion[]
+
+  @@index([state]) // For state-based filtering
+  @@map("communities")
+}
+
+/// Community membership junction table
+model CommunityMember {
+  communityId String
+  volunteerId String
+  joinedAt    DateTime @default(now())
+  role        String   @default("member") // member, moderator, owner
+
+  // Relations
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@id([communityId, volunteerId])
+  @@map("community_members")
+}
+
+/// Cleanup events - Scheduled cleanups for reports
+model CleanupEvent {
+  id              String    @id @default(uuid())
+  communityId     String
+  reportId        String
+  leaderId        String
+  scheduledAt     DateTime
+  status          String    @default("scheduled") // scheduled | completed | cancelled | disputed
+  markedCleanedAt DateTime?
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  community Community       @relation(fields: [communityId], references: [id])
+  report    Report          @relation(fields: [reportId], references: [id])
+  leader    Volunteer       @relation("EventLeader", fields: [leaderId], references: [id])
+  attendees EventAttendee[]
+
+  @@map("cleanup_events")
+}
+
+/// Event attendees - RSVP tracking
+model EventAttendee {
+  eventId     String
+  volunteerId String
+  rsvpStatus  String   @default("attending") // attending | disputed
+  joinedAt    DateTime @default(now())
+
+  // Relations
+  event     CleanupEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  volunteer Volunteer    @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, volunteerId])
+  @@map("event_attendees")
+}
+
+/// Comments on reports - Discussion before scheduling
+model Comment {
+  id          String   @id @default(uuid())
+  reportId    String
+  volunteerId String
+  text        String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  report    Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  volunteer Volunteer @relation(fields: [volunteerId], references: [id])
+
+  @@map("comments")
+}
+
+/// Community claimed issues - Issues/reports claimed by community moderators
+model CommunityClaimedIssue {
+  id          String   @id @default(uuid())
+  communityId String
+  issueId     String // Can be reportId or other issue type
+  issueType   String   @default("report") // report, event, discussion
+  claimedBy   String // volunteerId
+  claimedAt   DateTime @default(now())
+  status      String   @default("claimed") // claimed, in_progress, resolved
+  resolvedAt  DateTime?
+
+  // Relations
+  community      Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  claimedByUser  Volunteer @relation("ClaimedIssues", fields: [claimedBy], references: [id])
+
+  @@unique([communityId, issueId])
+  @@index([communityId])
+  @@index([issueId])
+  @@map("community_claimed_issues")
+}
+
+/// Community join requests
+model CommunityJoinRequest {
+  id          String   @id @default(uuid())
+  communityId String
+  volunteerId String
+  status      String   @default("pending") // pending, approved, rejected
+  requestedAt DateTime @default(now())
+  respondedAt DateTime?
+  respondedBy String? // volunteerId of moderator who responded
+
+  // Relations
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, volunteerId])
+  @@index([communityId])
+  @@index([volunteerId])
+  @@map("community_join_requests")
+}
+
+/// Community discussions/messages
+model CommunityDiscussion {
+  id          String   @id @default(uuid())
+  communityId String
+  userId      String
+  message     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([communityId])
+  @@index([userId])
+  @@map("community_discussions")
+}

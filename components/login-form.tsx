@@ -23,6 +23,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false)
+  const [isResendingVerification, setIsResendingVerification] = useState(false)
   const { signIn, loading } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -41,12 +43,12 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setNeedsEmailVerification(false)
 
     // Trim and validate inputs
     const trimmedEmail = email.trim()
-    const trimmedPassword = password.trim()
 
-    if (!trimmedEmail || !trimmedPassword) {
+    if (!trimmedEmail || !password) {
       setError('Email and password are required')
       setIsLoading(false)
       return
@@ -61,14 +63,48 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     }
 
     try {
-      await signIn(trimmedEmail, trimmedPassword)
+      await signIn(trimmedEmail, password)
       const redirectUrl = searchParams.get('redirect')
-      router.push(redirectUrl || '/profile')
+      router.push(redirectUrl || '/volunteer')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
       setError(errorMessage)
+      
+      // Check if error indicates email verification needed
+      if (errorMessage.toLowerCase().includes('verify your email') || 
+          errorMessage.toLowerCase().includes('email not confirmed')) {
+        setNeedsEmailVerification(true)
+      }
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    setIsResendingVerification(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSuccessMessage('Verification email sent! Please check your inbox and spam folder.')
+        setNeedsEmailVerification(false)
+        setError(null)
+      } else {
+        setError(data.error || 'Failed to resend verification email')
+      }
+    } catch {
+      setError('Failed to resend verification email. Please try again.')
+    } finally {
+      setIsResendingVerification(false)
     }
   }
 
@@ -131,7 +167,23 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                   {successMessage}
                 </div>
               )}
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && (
+                <div className="space-y-2">
+                  <p className="text-sm text-red-500">{error}</p>
+                  {needsEmailVerification && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResendVerification}
+                      disabled={isResendingVerification}
+                      className="w-full"
+                    >
+                      {isResendingVerification ? 'Sending...' : 'Resend Verification Email'}
+                    </Button>
+                  )}
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={isLoading || loading}>
                 {isLoading || loading ? 'Logging in...' : 'Login'}
               </Button>

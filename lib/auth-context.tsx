@@ -116,19 +116,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        let errorMessage = 'Login failed';
-        try {
-          const data = await response.json();
-          errorMessage = data.error || data.message || errorMessage;
-        } catch {
-          // If response is not JSON, use status text
-          errorMessage = response.statusText || errorMessage;
+        let errorMessage = data.error || data.message || 'Login failed';
+        
+        // Check if it's an email verification error
+        if (data.details?.needsEmailVerification || data.details?.code === 'EMAIL_NOT_VERIFIED') {
+          errorMessage = 'Please verify your email address. Check your inbox for the verification link.';
         }
+        
         throw new Error(errorMessage);
       }
-
-      const data = await response.json();
 
       if (!data.success || !data.data) {
         throw new Error(data.error || 'Invalid response from server');

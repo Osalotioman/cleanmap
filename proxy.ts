@@ -4,12 +4,12 @@ import { createServerClient } from '@supabase/ssr';
 
 /**
  * Proxy for authentication and route protection
- * 
+ *
  * Protected routes:
  * - /dashboard
  * - /profile
  * - /report (requires auth)
- * 
+ *
  * Public routes:
  * - /auth/login
  * - /auth/sign-up
@@ -56,7 +56,7 @@ export async function proxy(request: NextRequest) {
     '/',
     '/how-it-works',
     '/report',
-    '/volunteer',
+    '/volunteers',
     '/auth/login',
     '/auth/sign-up',
     '/auth/sign-up-success',
@@ -82,7 +82,6 @@ export async function proxy(request: NextRequest) {
     redirectUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(redirectUrl);
   }
-
 
   return response;
 }
