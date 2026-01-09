@@ -84,7 +84,10 @@ export default function ReportsListPage() {
     }
 
     // Search query
-    if (searchQuery && report.description) {
+    if (searchQuery) {
+      if (!report.description) {
+        return false;
+      }
       return report.description.toLowerCase().includes(searchQuery.toLowerCase());
     }
 
