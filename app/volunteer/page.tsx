@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ export default function VolunteerDashboard() {
       <div>
         <h1 className="text-3xl font-bold">Volunteer Dashboard</h1>
         <p className="text-muted-foreground mt-2">
-          Welcome back! Here's what's happening in your communities.
+          Welcome back! Here&apos;s what&apos;s happening in your communities.
         </p>
       </div>
 
@@ -114,7 +113,7 @@ export default function VolunteerDashboard() {
           <CardHeader>
             <CardTitle>My Communities</CardTitle>
             <CardDescription>
-              Communities you're an active member of
+              Communities you&apos;re an active member of
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

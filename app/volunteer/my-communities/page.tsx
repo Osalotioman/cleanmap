@@ -18,11 +18,18 @@ import {
 } from "@/components/ui/dialog"
 import { Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
-import { CommunityWithStatus } from "@/types/community"
 import { CreateCommunityForm } from "@/components/create-community-form"
 
+type MyGeoCommunity = {
+  id: string
+  name: string
+  state: string
+  radius: number
+  isMember?: boolean
+}
+
 export default function MyCommunitiesPage() {
-  const [communities, setCommunities] = useState<CommunityWithStatus[]>([])
+  const [communities, setCommunities] = useState<MyGeoCommunity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -33,16 +40,16 @@ export default function MyCommunitiesPage() {
         setLoading(true)
         setError(null)
 
-        const response = await fetch("/api/community/list")
+  const response = await fetch("/api/communities/list")
         const data = await response.json()
 
         if (!response.ok) {
           throw new Error(data.error || "Failed to fetch communities")
         }
 
-        // Filter only communities where user is a member
-        const myCommunities = data.data.communities.filter(
-          (c: CommunityWithStatus) => c.isMember
+        // The geo schema list endpoint already includes membership status for the current user.
+        const myCommunities = (data.data.communities as MyGeoCommunity[]).filter(
+          (c) => Boolean(c.isMember)
         )
         setCommunities(myCommunities)
       } catch (err) {
@@ -142,18 +149,9 @@ export default function MyCommunitiesPage() {
               <CardContent className="space-y-3">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">
-                    {c.location} • {c.coverageType}
+                    {c.state} • {Math.round((c.radius ?? 0) / 1000)}km radius
                   </p>
-                  {c.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {c.description}
-                    </p>
-                  )}
                 </div>
-
-                <p className="text-sm text-muted-foreground">
-                  {c.memberCount} member{c.memberCount !== 1 ? "s" : ""}
-                </p>
 
                 <Button asChild size="sm" className="w-full">
                   <Link href={`/volunteer/my-communities/${c.id}`}>

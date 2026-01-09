@@ -46,16 +46,16 @@ import { getAuthUser } from '@/lib/supabase/server';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     // Get authenticated user
-    const authUser = await getAuthUser(request);
+    const authUser = await getAuthUser();
     if (!authUser) {
       return errorResponse('Unauthorized: Please log in', 401);
     }
 
-    const { id: communityId } = params;
+    const { id: communityId } = await params;
 
     if (!communityId) {
       return errorResponse('Community ID is required', 400);
@@ -69,16 +69,25 @@ export async function POST(
 
     const issueId = body.issueId as string;
 
+    // Get volunteer record for the authenticated user
+    const user = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: { volunteerId: true },
+    });
+
+    if (!user || !user.volunteerId) {
+      return errorResponse('You must be a volunteer to claim issues', 403);
+    }
+
     // Check if user is a moderator in this community
     const userMembership = await prisma.communityMember.findUnique({
       where: {
-        userId_communityId: {
-          userId: authUser.id,
+        communityId_volunteerId: {
+          volunteerId: user.volunteerId,
           communityId,
         },
       },
       select: {
-        id: true,
         role: true,
       },
     });
@@ -120,7 +129,7 @@ export async function POST(
             status: 'active',
             claimedBy: authUser.id,
             claimedAt: new Date(),
-            completedAt: null,
+            resolvedAt: null,
           },
         })
       : await prisma.communityClaimedIssue.create({
@@ -172,26 +181,31 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; issueId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     // Get authenticated user
-    const authUser = await getAuthUser(request);
+    const authUser = await getAuthUser();
     if (!authUser) {
       return errorResponse('Unauthorized: Please log in', 401);
     }
 
-    const { id: communityId, issueId } = params;
+    const { id: communityId } = await params;
+    const { searchParams } = new URL(request.url);
+    const issueId = searchParams.get('issueId');
 
     if (!communityId || !issueId) {
       return errorResponse('Community ID and Issue ID are required', 400);
     }
+    // Get volunteer record
+    const user = await prisma.user.findUnique({ where: { id: authUser.id }, select: { volunteerId: true } });
+    if (!user?.volunteerId) return errorResponse("Must be a volunteer", 403);
 
     // Check if user is a moderator in this community
     const userMembership = await prisma.communityMember.findUnique({
       where: {
-        userId_communityId: {
-          userId: authUser.id,
+        communityId_volunteerId: {
+          volunteerId: user.volunteerId,
           communityId,
         },
       },
@@ -217,7 +231,6 @@ export async function DELETE(
         },
       },
       select: {
-        id: true,
         status: true,
       },
     });

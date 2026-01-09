@@ -35,16 +35,16 @@ import { getAuthUser } from '@/lib/supabase/server';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     // Get authenticated user
-    const authUser = await getAuthUser(request);
+    const authUser = await getAuthUser();
     if (!authUser) {
       return errorResponse('Unauthorized: Please log in', 401);
     }
 
-    const { id: communityId } = params;
+  const { id: communityId } = await params;
 
     if (!communityId) {
       return errorResponse('Community ID is required', 400);
@@ -54,9 +54,7 @@ export async function POST(
     const community = await prisma.community.findUnique({
       where: { id: communityId },
       select: {
-        id: true,
-        ownerId: true,
-        memberCount: true,
+        createdBy: true,
       },
     });
 
@@ -65,7 +63,7 @@ export async function POST(
     }
 
     // Cannot allow owner to leave without transferring ownership
-    if (community.ownerId === authUser.id) {
+    if (community.createdBy === authUser.id) {
       return errorResponse(
         'Community owner cannot leave. Please transfer ownership or delete the community.',
         403
@@ -75,13 +73,10 @@ export async function POST(
     // Find and delete user membership
     const membership = await prisma.communityMember.findUnique({
       where: {
-        userId_communityId: {
-          userId: authUser.id,
-          communityId,
+        communityId_volunteerId: {
+          volunteerId: authUser.id,
+          communityId: communityId,
         },
-      },
-      select: {
-        id: true,
       },
     });
 
@@ -91,13 +86,12 @@ export async function POST(
 
     // Delete membership
     await prisma.communityMember.delete({
-      where: { id: membership.id },
-    });
-
-    // Decrement member count
-    await prisma.community.update({
-      where: { id: communityId },
-      data: { memberCount: { decrement: 1 } },
+      where: {
+        communityId_volunteerId: {
+          communityId,
+          volunteerId: authUser.id,
+        },
+      },
     });
 
     return successResponse(

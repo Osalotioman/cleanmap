@@ -7,13 +7,8 @@
  * @module app/api/community/[id]/moderators
  */
 
-import { NextResponse, NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { errorResponse, successResponse, parseRequestBody } from '@/lib/api-utils';
-import { getAuthUser } from '@/lib/supabase/server';
-
-const MIN_MODERATORS = 2;
-const MAX_MODERATORS = 5;
+import { NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/api-utils';
 
 /**
  * POST /api/community/:id/moderators
@@ -42,106 +37,11 @@ const MAX_MODERATORS = 5;
  * }
  */
 export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
-    // Get authenticated user
-    const authUser = await getAuthUser(request);
-    if (!authUser) {
-      return errorResponse('Unauthorized: Please log in', 401);
-    }
-
-    const { id: communityId } = params;
-
-    if (!communityId) {
-      return errorResponse('Community ID is required', 400);
-    }
-
-    const body = await parseRequestBody(request);
-
-    if (!body || !body.userId) {
-      return errorResponse('User ID is required', 400);
-    }
-
-    const userId = body.userId as string;
-
-    // Check if user is the community owner
-    const community = await prisma.community.findUnique({
-      where: { id: communityId },
-      select: {
-        id: true,
-        ownerId: true,
-      },
-    });
-
-    if (!community) {
-      return errorResponse('Community not found', 404);
-    }
-
-    if (community.ownerId !== authUser.id) {
-      return errorResponse('Only the community owner can manage moderators', 403);
-    }
-
-    // Check if target user is a member
-    const targetMember = await prisma.communityMember.findUnique({
-      where: {
-        userId_communityId: {
-          userId,
-          communityId,
-        },
-      },
-    });
-
-    if (!targetMember) {
-      return errorResponse('User is not a member of this community', 404);
-    }
-
-    if (targetMember.role === 'moderator') {
-      return errorResponse('User is already a moderator', 409);
-    }
-
-    if (targetMember.role === 'owner') {
-      return errorResponse('Cannot promote owner role', 409);
-    }
-
-    // Check current moderator count
-    const moderatorCount = await prisma.communityMember.count({
-      where: {
-        communityId,
-        role: 'moderator',
-      },
-    });
-
-    if (moderatorCount >= MAX_MODERATORS) {
-      return errorResponse(
-        `Community has reached maximum moderators (${MAX_MODERATORS})`,
-        409
-      );
-    }
-
-    // Promote user to moderator
-    const updatedMember = await prisma.communityMember.update({
-      where: { id: targetMember.id },
-      data: { role: 'moderator' },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    return successResponse(
-      {
-        message: 'User promoted to moderator',
-        member: updatedMember,
-      },
-      200
+    return errorResponse(
+      'Moderator roles are not supported by the current database schema. Please add a role field to CommunityMember or remove this endpoint.',
+      501
     );
   } catch (error) {
     console.error('Add moderator error:', error);
@@ -177,99 +77,11 @@ export async function POST(
  * }
  */
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string; userId: string } }
 ): Promise<NextResponse> {
   try {
-    // Get authenticated user
-    const authUser = await getAuthUser(request);
-    if (!authUser) {
-      return errorResponse('Unauthorized: Please log in', 401);
-    }
-
-    const { id: communityId, userId } = params;
-
-    if (!communityId || !userId) {
-      return errorResponse('Community ID and User ID are required', 400);
-    }
-
-    // Check if user is the community owner
-    const community = await prisma.community.findUnique({
-      where: { id: communityId },
-      select: {
-        id: true,
-        ownerId: true,
-      },
-    });
-
-    if (!community) {
-      return errorResponse('Community not found', 404);
-    }
-
-    if (community.ownerId !== authUser.id) {
-      return errorResponse('Only the community owner can manage moderators', 403);
-    }
-
-    // Cannot demote the owner
-    if (userId === community.ownerId) {
-      return errorResponse('Cannot demote the community owner', 403);
-    }
-
-    // Find the target member
-    const targetMember = await prisma.communityMember.findUnique({
-      where: {
-        userId_communityId: {
-          userId,
-          communityId,
-        },
-      },
-    });
-
-    if (!targetMember) {
-      return errorResponse('User is not a member of this community', 404);
-    }
-
-    if (targetMember.role !== 'moderator') {
-      return errorResponse('User is not a moderator', 409);
-    }
-
-    // Check current moderator count
-    const moderatorCount = await prisma.communityMember.count({
-      where: {
-        communityId,
-        role: 'moderator',
-      },
-    });
-
-    if (moderatorCount <= MIN_MODERATORS) {
-      return errorResponse(
-        `Community must maintain at least ${MIN_MODERATORS} moderators`,
-        409
-      );
-    }
-
-    // Demote user back to member
-    const updatedMember = await prisma.communityMember.update({
-      where: { id: targetMember.id },
-      data: { role: 'member' },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    return successResponse(
-      {
-        message: 'User demoted from moderator',
-        member: updatedMember,
-      },
-      200
+    return errorResponse(
+      'Moderator roles are not supported by the current database schema. Please add a role field to CommunityMember or remove this endpoint.',
+      501
     );
   } catch (error) {
     console.error('Remove moderator error:', error);

@@ -1,5 +1,5 @@
 import { communities } from "@/lib/mock-communities"
-import { mockUser } from "@/lib/mock-user"
+// import { mockUser } from "@/lib/mock-user" // Reserved for future use
 import { notFound } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,9 @@ export default async function OverviewPage({ params }: Props) {
     <div className="space-y-6">
       <Card>
         <CardContent className="space-y-3 py-4">
-          <p>{community.description}</p>
+          <p className="text-sm text-muted-foreground">
+            {community.name} covers {community.coverage.toLowerCase()} around {community.location}.
+          </p>
 
           <div className="text-sm text-muted-foreground space-y-1">
             <p>👥 Members: {community.members}</p>

@@ -22,8 +22,9 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  volunteerId String?    @unique
-  volunteer   Volunteer? @relation(fields: [volunteerId], references: [id])
+  volunteerId         String?                @unique
+  volunteer           Volunteer?             @relation(fields: [volunteerId], references: [id])
+  communityDiscussions CommunityDiscussion[]
 
   @@map("users")
 }
@@ -37,11 +38,12 @@ model Volunteer {
 
   // Relations
   user               User?
-  createdCommunities Community[]       @relation("CommunityCreator")
+  createdCommunities Community[]              @relation("CommunityCreator")
   communityMembers   CommunityMember[]
-  ledEvents          CleanupEvent[]    @relation("EventLeader")
+  ledEvents          CleanupEvent[]           @relation("EventLeader")
   eventAttendees     EventAttendee[]
   comments           Comment[]
+  claimedIssues      CommunityClaimedIssue[]  @relation("ClaimedIssues")
 
   @@map("volunteers")
 }
@@ -76,12 +78,16 @@ model Community {
   centerLon Float // Center point longitude
   radius    Int      @default(2000) // meters
   createdBy String
+  ownerId   String? // Owner of the community (can be different from creator)
   createdAt DateTime @default(now())
 
   // Relations
-  creator Volunteer         @relation("CommunityCreator", fields: [createdBy], references: [id])
-  members CommunityMember[]
-  events  CleanupEvent[]
+  creator       Volunteer               @relation("CommunityCreator", fields: [createdBy], references: [id])
+  members       CommunityMember[]
+  events        CleanupEvent[]
+  claimedIssues CommunityClaimedIssue[]
+  joinRequests  CommunityJoinRequest[]
+  discussions   CommunityDiscussion[]
 
   @@index([state]) // For state-based filtering
   @@map("communities")
@@ -92,6 +98,7 @@ model CommunityMember {
   communityId String
   volunteerId String
   joinedAt    DateTime @default(now())
+  role        String   @default("member") // member, moderator, owner
 
   // Relations
   community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
@@ -149,4 +156,62 @@ model Comment {
   volunteer Volunteer @relation(fields: [volunteerId], references: [id])
 
   @@map("comments")
+}
+
+/// Community claimed issues - Issues/reports claimed by community moderators
+model CommunityClaimedIssue {
+  id          String   @id @default(uuid())
+  communityId String
+  issueId     String // Can be reportId or other issue type
+  issueType   String   @default("report") // report, event, discussion
+  claimedBy   String // volunteerId
+  claimedAt   DateTime @default(now())
+  status      String   @default("claimed") // claimed, in_progress, resolved
+  resolvedAt  DateTime?
+
+  // Relations
+  community      Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  claimedByUser  Volunteer @relation("ClaimedIssues", fields: [claimedBy], references: [id])
+
+  @@unique([communityId, issueId])
+  @@index([communityId])
+  @@index([issueId])
+  @@map("community_claimed_issues")
+}
+
+/// Community join requests
+model CommunityJoinRequest {
+  id          String   @id @default(uuid())
+  communityId String
+  volunteerId String
+  status      String   @default("pending") // pending, approved, rejected
+  requestedAt DateTime @default(now())
+  respondedAt DateTime?
+  respondedBy String? // volunteerId of moderator who responded
+
+  // Relations
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, volunteerId])
+  @@index([communityId])
+  @@index([volunteerId])
+  @@map("community_join_requests")
+}
+
+/// Community discussions/messages
+model CommunityDiscussion {
+  id          String   @id @default(uuid())
+  communityId String
+  userId      String
+  message     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([communityId])
+  @@index([userId])
+  @@map("community_discussions")
 }

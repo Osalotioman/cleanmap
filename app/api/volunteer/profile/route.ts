@@ -7,7 +7,7 @@ import { errorResponse, successResponse, parseRequestBody } from "@/lib/api-util
  * GET /api/volunteer/profile
  * Get the authenticated user's volunteer profile
  */
-export async function GET(request: Request): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   try {
     // Get authenticated user
     const supabase = await createClient();

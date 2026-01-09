@@ -7,8 +7,11 @@ interface IssueProps {
 }
 
 export default function IssueDetails({ params }: IssueProps) {
+  const issueId = params.id;
+  
   // Dummy issue data
   const issue = {
+    id: issueId,
     title: "Overflowing trash",
     description: "Garbage bin full on 5th Avenue",
     coords: [51.505, -0.09] as [number, number],

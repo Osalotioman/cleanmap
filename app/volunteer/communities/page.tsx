@@ -20,21 +20,26 @@ import {
 import { Input } from "@/components/ui/input"
 import { Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
-import { CommunityWithStatus } from "@/types/community"
 
-type StatusFilter = "all" | "active" | "inactive"
-type CoverageFilter = "all" | "neighborhood" | "district" | "city"
+type GeoCommunityListItem = {
+  id: string
+  name: string
+  state: string
+  radius: number
+  // optional, may not be returned depending on endpoint
+  isMember?: boolean
+}
 
 export default function CommunitiesPage() {
-  const [communities, setCommunities] = useState<CommunityWithStatus[]>([])
+  const [communities, setCommunities] = useState<GeoCommunityListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const [location, setLocation] = useState("")
-  const [coverage, setCoverage] = useState<CoverageFilter>("all")
+  // With the current geo-circle schema, `state` is the main filterable location field.
+  const [stateFilter, setStateFilter] = useState("")
   const [search, setSearch] = useState("")
   
-  const [joinRequestLoading, setJoinRequestLoading] = useState<string | null>(null)
+  const [joinLoading, setJoinLoading] = useState<string | null>(null)
 
   // Fetch communities
   useEffect(() => {
@@ -44,18 +49,17 @@ export default function CommunitiesPage() {
         setError(null)
 
         const params = new URLSearchParams()
-        if (location) params.append("location", location)
-        if (coverage !== "all") params.append("coverageType", coverage)
+  if (stateFilter) params.append("state", stateFilter)
         if (search) params.append("search", search)
 
-        const response = await fetch(`/api/community/list?${params.toString()}`)
+        const response = await fetch(`/api/communities/list?${params.toString()}`)
         const data = await response.json()
 
         if (!response.ok) {
           throw new Error(data.error || "Failed to fetch communities")
         }
 
-        setCommunities(data.data.communities)
+        setCommunities(data.data.communities as GeoCommunityListItem[])
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load communities"
         setError(message)
@@ -71,88 +75,44 @@ export default function CommunitiesPage() {
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [location, coverage, search])
+  }, [stateFilter, search])
 
   const uniqueLocations = useMemo(
-    () => Array.from(new Set(communities.map((c) => c.location))).sort(),
+    () => Array.from(new Set(communities.map((c) => c.state))).filter(Boolean).sort(),
     [communities]
   )
 
-  const handleJoinRequest = async (communityId: string) => {
+  const handleJoinCommunity = async (communityId: string) => {
     try {
-      setJoinRequestLoading(communityId)
+      setJoinLoading(communityId)
 
-      const response = await fetch("/api/community/join-request", {
+      const response = await fetch(`/api/communities/${communityId}/join`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ communityId }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        toast.error(data.error || "Failed to send join request")
+        toast.error(data.error || "Failed to join community")
         return
       }
 
-      toast.success("Join request sent! Awaiting response from moderators.")
+      toast.success("Joined community")
 
-      // Update community status in list
       setCommunities((prev) =>
         prev.map((c) =>
           c.id === communityId
             ? {
                 ...c,
-                hasJoinRequest: true,
-                joinRequestStatus: "pending",
-                userJoinRequest: data.data.joinRequest,
+                isMember: true,
               }
             : c
         )
       )
-    } catch (err) {
-      toast.error("An error occurred while sending join request")
+    } catch {
+      toast.error("An error occurred while joining")
     } finally {
-      setJoinRequestLoading(null)
-    }
-  }
-
-  const handleCancelRequest = async (requestId: string, communityId: string) => {
-    try {
-      setJoinRequestLoading(communityId)
-
-      const response = await fetch(`/api/community/join-request/${requestId}`, {
-        method: "DELETE",
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        toast.error(data.error || "Failed to cancel join request")
-        return
-      }
-
-      toast.success("Join request cancelled")
-
-      // Update community status in list
-      setCommunities((prev) =>
-        prev.map((c) =>
-          c.id === communityId
-            ? {
-                ...c,
-                hasJoinRequest: false,
-                joinRequestStatus: null,
-                userJoinRequest: null,
-              }
-            : c
-        )
-      )
-    } catch (err) {
-      toast.error("An error occurred while cancelling join request")
-    } finally {
-      setJoinRequestLoading(null)
+      setJoinLoading(null)
     }
   }
 
@@ -178,7 +138,7 @@ export default function CommunitiesPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4">
-        <Select value={location} onValueChange={setLocation}>
+        <Select value={stateFilter} onValueChange={setStateFilter}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="All locations" />
           </SelectTrigger>
@@ -189,21 +149,6 @@ export default function CommunitiesPage() {
                 {loc}
               </SelectItem>
             ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={coverage}
-          onValueChange={(v) => setCoverage(v as CoverageFilter)}
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Coverage type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All coverage types</SelectItem>
-            <SelectItem value="neighborhood">Neighborhood</SelectItem>
-            <SelectItem value="district">District</SelectItem>
-            <SelectItem value="city">City-wide</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -242,23 +187,15 @@ export default function CommunitiesPage() {
                 <CardTitle className="flex justify-between items-center">
                   <span className="line-clamp-2">{c.name}</span>
                   {c.isMember && <Badge>Joined</Badge>}
-                  {c.hasJoinRequest && <Badge variant="secondary">Pending</Badge>}
                 </CardTitle>
               </CardHeader>
 
               <CardContent className="space-y-3">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">
-                    {c.location} • {c.coverageType}
+                    {c.state} • {Math.round((c.radius ?? 0) / 1000)}km radius
                   </p>
-                  {c.description && (
-                    <p className="text-sm line-clamp-2">{c.description}</p>
-                  )}
                 </div>
-
-                <p className="text-sm text-muted-foreground">
-                  {c.memberCount} member{c.memberCount !== 1 ? "s" : ""}
-                </p>
 
                 {c.isMember ? (
                   <Button asChild size="sm" className="w-full">
@@ -266,37 +203,20 @@ export default function CommunitiesPage() {
                       Open community
                     </Link>
                   </Button>
-                ) : c.hasJoinRequest ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleCancelRequest(c.userJoinRequest!.id, c.id)}
-                    disabled={joinRequestLoading === c.id}
-                  >
-                    {joinRequestLoading === c.id ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Cancelling...
-                      </>
-                    ) : (
-                      "Cancel request"
-                    )}
-                  </Button>
                 ) : (
                   <Button
                     size="sm"
                     className="w-full"
-                    onClick={() => handleJoinRequest(c.id)}
-                    disabled={joinRequestLoading === c.id}
+                    onClick={() => handleJoinCommunity(c.id)}
+                    disabled={joinLoading === c.id}
                   >
-                    {joinRequestLoading === c.id ? (
+                    {joinLoading === c.id ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
+                        Joining...
                       </>
                     ) : (
-                      "Send join request"
+                      "Join community"
                     )}
                   </Button>
                 )}

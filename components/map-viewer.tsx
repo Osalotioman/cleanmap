@@ -40,7 +40,9 @@ export function MapViewer({
   enableClickToSelect = false,
 }: MapViewerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [map, setMap] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [leaflet, setLeaflet] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(null);
@@ -50,9 +52,11 @@ export function MapViewer({
     const loadLeaflet = async () => {
       try {
         const L = await import('leaflet');
+        // @ts-expect-error - CSS import needed for Leaflet styles
         await import('leaflet/dist/leaflet.css');
         
         // Fix default marker icons
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (L.Icon.Default.prototype as any)._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -86,6 +90,7 @@ export function MapViewer({
 
     // Add click handler
     if (enableClickToSelect || onMapClick) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       newMap.on('click', (e: any) => {
         const { lat, lng } = e.latlng;
         setSelectedLocation([lat, lng]);
@@ -105,7 +110,9 @@ export function MapViewer({
     if (!map || !leaflet || !reports) return;
 
     // Clear existing markers (except selected location)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     map.eachLayer((layer: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (layer instanceof leaflet.Marker && layer !== (map as any).selectedMarker) {
         map.removeLayer(layer);
       }
@@ -167,6 +174,7 @@ export function MapViewer({
     if (!map || !leaflet || !communities) return;
 
     // Clear existing circles
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     map.eachLayer((layer: any) => {
       if (layer instanceof leaflet.Circle) {
         map.removeLayer(layer);
@@ -204,7 +212,9 @@ export function MapViewer({
     if (!map || !leaflet || !selectedLocation) return;
 
     // Remove previous selected marker
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((map as any).selectedMarker) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       map.removeLayer((map as any).selectedMarker);
     }
 
@@ -236,6 +246,7 @@ export function MapViewer({
       })
       .addTo(map);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (map as any).selectedMarker = marker;
     map.setView(selectedLocation, map.getZoom());
   }, [map, leaflet, selectedLocation]);

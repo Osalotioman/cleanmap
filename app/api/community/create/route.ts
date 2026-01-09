@@ -15,7 +15,7 @@ import {
   successResponse,
   validateRequiredFields,
 } from '@/lib/api-utils';
-import { CreateCommunityRequest, CreateCommunityResponse } from '@/types/community';
+import { CreateCommunityRequest } from '@/types/community';
 import { getAuthUser } from '@/lib/supabase/server';
 
 /**
@@ -67,7 +67,7 @@ import { getAuthUser } from '@/lib/supabase/server';
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Get authenticated user from Supabase
-    const authUser = await getAuthUser(request);
+    const authUser = await getAuthUser();
     if (!authUser) {
       return errorResponse('Unauthorized: Please log in to create a community', 401);
     }
@@ -100,7 +100,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       location,
       coverageType = 'neighborhood',
       guidelines,
-      imageUrl,
     } = body as unknown as CreateCommunityRequest;
 
     // Validate inputs
@@ -141,44 +140,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Create community
       const community = await tx.community.create({
         data: {
-          ownerId: user.id,
           name: name.trim(),
-          description: description?.trim(),
-          location: location.trim(),
-          coverageType,
-          guidelines: guidelines?.trim(),
-          imageUrl,
-          status: 'active',
-          memberCount: 1,
+          // The current schema models communities as geographic circles
+          state: location.trim(),
+          centerLat: 0,
+          centerLon: 0,
+          radius: 2000,
+          createdBy: user.id,
         },
         select: {
           id: true,
-          ownerId: true,
           name: true,
-          description: true,
-          location: true,
-          coverageType: true,
-          guidelines: true,
-          imageUrl: true,
-          status: true,
-          memberCount: true,
+          state: true,
+          centerLat: true,
+          centerLon: true,
+          radius: true,
+          createdBy: true,
           createdAt: true,
-          updatedAt: true,
         },
       });
 
       // Create owner membership
       const membership = await tx.communityMember.create({
         data: {
-          userId: user.id,
+          volunteerId: user.id,
           communityId: community.id,
-          role: 'owner',
         },
         select: {
-          id: true,
-          userId: true,
+          volunteerId: true,
           communityId: true,
-          role: true,
           joinedAt: true,
         },
       });
@@ -186,7 +176,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return { community, membership };
     });
 
-    return successResponse<CreateCommunityResponse>(result, 201);
+  return successResponse(result as unknown as Record<string, unknown>, 201);
   } catch (error) {
     console.error('Create community error:', error);
 

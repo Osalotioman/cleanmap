@@ -101,7 +101,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
       } else {
         setError(data.error || 'Failed to resend verification email')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to resend verification email. Please try again.')
     } finally {
       setIsResendingVerification(false)

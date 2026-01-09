@@ -52,10 +52,10 @@ import { getAuthUser } from '@/lib/supabase/server';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
-    const { id: communityId } = params;
+    const { id: communityId } = await params;
 
     if (!communityId) {
       return errorResponse('Community ID is required', 400);
@@ -65,26 +65,18 @@ export async function GET(
     const community = await prisma.community.findUnique({
       where: { id: communityId },
       include: {
-        owner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
+        // CommunityMember -> Volunteer relation is `volunteer` in schema
         members: {
           include: {
-            user: {
+            volunteer: {
               select: {
                 id: true,
-                firstName: true,
-                lastName: true,
+                name: true,
                 email: true,
               },
             },
           },
-          orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }],
+          orderBy: [{ joinedAt: 'asc' }],
         },
       },
     });
@@ -94,33 +86,26 @@ export async function GET(
     }
 
     // Get authenticated user if available
-    const authUser = await getAuthUser(request);
-    let userRole: string | null = null;
+    const authUser = await getAuthUser();
     let isMember = false;
 
     if (authUser) {
       const membership = await prisma.communityMember.findUnique({
         where: {
-          userId_communityId: {
-            userId: authUser.id,
+          communityId_volunteerId: {
+            volunteerId: authUser.id,
             communityId,
           },
         },
-        select: {
-          role: true,
-        },
+        select: { volunteerId: true },
       });
 
-      if (membership) {
-        userRole = membership.role;
-        isMember = true;
-      }
+      isMember = Boolean(membership);
     }
 
     return successResponse(
       {
         community,
-        userRole,
         isMember,
       },
       200

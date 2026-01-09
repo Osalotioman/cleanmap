@@ -68,10 +68,10 @@ import { errorResponse, successResponse } from '@/lib/api-utils';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
-    const { id: communityId } = params;
+    const { id: communityId } = await params;
 
     if (!communityId) {
       return errorResponse('Community ID is required', 400);
@@ -94,7 +94,7 @@ export async function GET(
     }
 
     // Build where clause
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       communityId,
       status: { not: 'cancelled' }, // Don't return cancelled by default
     };
@@ -112,9 +112,7 @@ export async function GET(
       include: {
         claimedByUser: {
           select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+            name: true,
             email: true,
           },
         },
@@ -132,14 +130,12 @@ export async function GET(
       include: {
         claimedByUser: {
           select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+            name: true,
             email: true,
           },
         },
       },
-      orderBy: [{ completedAt: 'desc' }],
+      orderBy: [{ resolvedAt: 'desc' }],
     });
 
     // Get counts
@@ -191,10 +187,14 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; issueId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
-    const { id: communityId, issueId } = params;
+    const { id: communityId } = await params;
+    
+    // Get issueId from URL search params
+    const { searchParams } = new URL(request.url);
+    const issueId = searchParams.get('issueId');
 
     if (!communityId || !issueId) {
       return errorResponse('Community ID and Issue ID are required', 400);
@@ -228,14 +228,12 @@ export async function PATCH(
       },
       data: {
         status: 'completed',
-        completedAt: new Date(),
+        resolvedAt: new Date(),
       },
       include: {
         claimedByUser: {
           select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+            name: true,
             email: true,
           },
         },

@@ -7,11 +7,8 @@
  * @module app/api/community/list
  */
 
-import { NextResponse, NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { errorResponse, successResponse } from '@/lib/api-utils';
-import { CommunityWithStatus } from '@/types/community';
-import { getAuthUser } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/api-utils';
 
 /**
  * GET /api/community/list
@@ -55,143 +52,11 @@ import { getAuthUser } from '@/lib/supabase/server';
  *   }
  * }
  */
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   try {
-    // Get query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const location = searchParams.get('location');
-    const coverageType = searchParams.get('coverageType');
-    const status = searchParams.get('status') || 'active';
-    const search = searchParams.get('search');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
-    const offset = parseInt(searchParams.get('offset') || '0');
-
-    // Get authenticated user (optional)
-    const authUser = await getAuthUser(request);
-
-    // Build filter conditions
-    const where: any = {
-      status: status,
-    };
-
-    if (location) {
-      where.location = {
-        contains: location,
-        mode: 'insensitive',
-      };
-    }
-
-    if (coverageType && ['neighborhood', 'district', 'city'].includes(coverageType)) {
-      where.coverageType = coverageType;
-    }
-
-    if (search) {
-      where.OR = [
-        {
-          name: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
-        {
-          description: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
-      ];
-    }
-
-    // Fetch communities
-    const [communities, total] = await Promise.all([
-      prisma.community.findMany({
-        where,
-        select: {
-          id: true,
-          ownerId: true,
-          name: true,
-          description: true,
-          location: true,
-          coverageType: true,
-          guidelines: true,
-          imageUrl: true,
-          status: true,
-          memberCount: true,
-          createdAt: true,
-          updatedAt: true,
-          owner: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: limit,
-        skip: offset,
-      }),
-      prisma.community.count({ where }),
-    ]);
-
-    // If user is authenticated, fetch their membership and join request status
-    let userMemberships: any = {};
-    let userJoinRequests: any = {};
-
-    if (authUser) {
-      const [memberships, joinRequests] = await Promise.all([
-        prisma.communityMember.findMany({
-          where: {
-            userId: authUser.id,
-            communityId: {
-              in: communities.map((c) => c.id),
-            },
-          },
-        }),
-        prisma.communityJoinRequest.findMany({
-          where: {
-            userId: authUser.id,
-            communityId: {
-              in: communities.map((c) => c.id),
-            },
-            status: 'pending',
-          },
-        }),
-      ]);
-
-      // Index for quick lookup
-      memberships.forEach((m) => {
-        userMemberships[m.communityId] = m;
-      });
-
-      joinRequests.forEach((jr) => {
-        userJoinRequests[jr.communityId] = jr;
-      });
-    }
-
-    // Build response with user status
-    const communitiesWithStatus: CommunityWithStatus[] = communities.map(
-      (community) => ({
-        ...community,
-        userMembership: userMemberships[community.id] || null,
-        userJoinRequest: userJoinRequests[community.id] || null,
-        isMember: !!userMemberships[community.id],
-        hasJoinRequest: !!userJoinRequests[community.id],
-        joinRequestStatus: userJoinRequests[community.id]?.status || null,
-      })
-    );
-
-    return successResponse(
-      {
-        communities: communitiesWithStatus,
-        total,
-        limit,
-        offset,
-      },
-      200
+    return errorResponse(
+      'Community listing is not supported by the current database schema/client (expected legacy fields like description/location/coverageType/status/memberCount and join requests). Please reconcile the API with prisma/schema.prisma.',
+      501
     );
   } catch (error) {
     console.error('Fetch communities error:', error);

@@ -8,6 +8,7 @@ import { OpenStreetMapProvider, GeoSearchControl } from "leaflet-geosearch"
 import "leaflet-geosearch/dist/geosearch.css"
 
 // Fix default marker icon in Leaflet
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -18,9 +19,10 @@ L.Icon.Default.mergeOptions({
 interface MapPickerProps {
   location: [number, number] | null
   setLocation: (coords: [number, number]) => void
+  readOnly?: boolean
 }
 
-export default function MapPicker({ location, setLocation }: MapPickerProps) {
+export default function MapPicker({ location, setLocation, readOnly = false }: MapPickerProps) {
   const [markerPos, setMarkerPos] = useState<[number, number] | null>(location)
 
   // Update marker if parent updates location
@@ -31,6 +33,7 @@ export default function MapPicker({ location, setLocation }: MapPickerProps) {
   function LocationMarker() {
     useMapEvents({
       click(e) {
+        if (readOnly) return; // Don't allow clicking in read-only mode
         const coords: [number, number] = [e.latlng.lat, e.latlng.lng]
         setMarkerPos(coords)
         setLocation(coords)
@@ -49,13 +52,16 @@ export default function MapPicker({ location, setLocation }: MapPickerProps) {
         showMarker: false, // we handle our own marker
       })
       map.addControl(searchControl)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       map.on("geosearch/showlocation", (e: any) => {
         const coords: [number, number] = [e.location.y, e.location.x]
         setMarkerPos(coords)
         setLocation(coords)
         map.setView(coords, 16)
       })
-      return () => map.removeControl(searchControl)
+      return () => {
+        map.removeControl(searchControl)
+      }
     }, [map])
     return null
   }
@@ -71,7 +77,7 @@ export default function MapPicker({ location, setLocation }: MapPickerProps) {
         attribution="&copy; OpenStreetMap contributors"
       />
       <LocationMarker />
-      <SearchControl />
+      {!readOnly && <SearchControl />}
     </MapContainer>
   )
 }

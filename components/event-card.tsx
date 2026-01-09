@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,16 @@ export function EventCard({
   onClick,
   isLoading = false,
 }: EventCardProps) {
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  // Update current time periodically for dispute window calculation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
   const statusInfo = statusConfig[event.status as keyof typeof statusConfig] || statusConfig.scheduled;
   const StatusIcon = statusInfo.icon;
   const isLeader = currentUserId === event.leader.id;
@@ -81,11 +92,11 @@ export function EventCard({
   const isPast = scheduledDate < new Date();
   const isToday = scheduledDate.toDateString() === new Date().toDateString();
 
-  // Calculate dispute window
+  // Calculate dispute window using state-tracked current time to avoid impure function call
   let disputeWindowRemaining = null;
   if (event.status === 'completed' && event.markedCleanedAt) {
     const markedDate = new Date(event.markedCleanedAt);
-    const hoursPassed = (Date.now() - markedDate.getTime()) / (1000 * 60 * 60);
+    const hoursPassed = (currentTime - markedDate.getTime()) / (1000 * 60 * 60);
     const hoursRemaining = Math.max(0, 24 - hoursPassed);
     disputeWindowRemaining = hoursRemaining;
   }
@@ -244,7 +255,7 @@ export function EventCard({
 
           {hasRSVPd && event.status === 'scheduled' && (
             <Badge variant="secondary" className="flex-1 justify-center">
-              You're attending
+              You&apos;re attending
             </Badge>
           )}
         </div>

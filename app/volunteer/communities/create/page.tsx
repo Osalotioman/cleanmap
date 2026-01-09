@@ -93,7 +93,7 @@ export default function CreateCommunityPage() {
     }
 
     checkAndSuggest();
-  }, [selectedLocation]);
+  }, [selectedLocation, communityName]);
 
   const handleMapClick = (lat: number, lon: number) => {
     setSelectedLocation([lat, lon]);
@@ -318,7 +318,7 @@ export default function CreateCommunityPage() {
                   <strong>Community Rules:</strong>
                   <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
                     <li>Communities have a 2km radius</li>
-                    <li>You'll automatically become a member and creator</li>
+                    <li>You&apos;ll automatically become a member and creator</li>
                     <li>You can invite other volunteers to join</li>
                     <li>You can organize cleanups within your community area</li>
                   </ul>
