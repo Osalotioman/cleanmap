@@ -9,6 +9,16 @@ import { useCommunities } from '@/lib/hooks/use-communities';
 import { useVolunteerStats } from '@/lib/hooks/use-volunteer-stats';
 import { MapPin, Users, FileText, Plus, Loader2, AlertCircle } from 'lucide-react';
 
+type DashboardCommunity = {
+  id: string;
+  name: string;
+  state: string;
+  radius: number;
+  memberCount: number;
+  isMember: boolean;
+  distance?: number;
+};
+
 export default function VolunteerDashboard() {
   const router = useRouter();
   const location = useLocation();
@@ -21,8 +31,10 @@ export default function VolunteerDashboard() {
     location.longitude
   );
 
-  const myCommunities = communities.filter(c => c.isMember);
-  const availableCommunities = communities.filter(c => !c.isMember).slice(0, 3);
+  const myCommunities = (communities as unknown as DashboardCommunity[]).filter(c => c.isMember);
+  const availableCommunities = (communities as unknown as DashboardCommunity[])
+    .filter(c => !c.isMember)
+    .slice(0, 3);
 
   return (
     <div className="space-y-8">
@@ -121,12 +133,12 @@ export default function VolunteerDashboard() {
               <div
                 key={community.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer"
-                onClick={() => router.push(`/volunteer/communities/${community.id}`)}
+                onClick={() => router.push(`/volunteer/my-communities/${community.id}/overview`)}
               >
                 <div className="flex-1">
                   <h3 className="font-medium">{community.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {community.memberCount} members · {Math.round(community.distance)}m away
+                    {community.memberCount} members · {community.state} · {Math.round(community.radius / 1000)}km radius
                   </p>
                 </div>
                 <Button variant="ghost" size="sm">
@@ -169,12 +181,12 @@ export default function VolunteerDashboard() {
                     <div className="flex-1">
                       <h3 className="font-medium">{community.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {community.memberCount} members · {Math.round(community.distance)}m away
+                        {community.memberCount} members · {community.state} · {Math.round(community.radius / 1000)}km radius
                       </p>
                     </div>
                     <Button
                       size="sm"
-                      onClick={() => router.push(`/volunteer/communities/${community.id}`)}
+                      onClick={() => router.push(`/volunteer/communities`)}
                     >
                       View
                     </Button>

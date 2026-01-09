@@ -1,55 +1,53 @@
 import { notFound } from "next/navigation"
-import { communities } from "@/lib/mock-communities"
-import { mockUser } from "@/lib/mock-user"
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 
 type Props = {
   params: Promise<{ slug: string }>
 }
 
+type Member = {
+  volunteerId: string
+  joinedAt: string | Date
+  volunteer: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
 export default async function RequestsPage({ params }: Props) {
   const { slug } = await params
-  const community = communities.find((c) => c.slug === slug)
 
-  if (!community) notFound()
+  // In Option A (instant join), there are no join requests.
+  // We reuse this route as a "Members" view.
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/communities/${slug}/members`,
+    { cache: "no-store" }
+  )
 
-  const isModerator =
-    mockUser.moderatedCommunities.includes(slug)
+  if (!res.ok) notFound()
 
-  if (!isModerator) notFound()
-
-  const requests = community.joinRequests ?? []
+  const data = (await res.json()) as { data?: { members?: Member[] } }
+  const members = data.data?.members ?? []
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">
-        Join Requests
-      </h2>
+      <h2 className="text-lg font-semibold">Members</h2>
 
-      {requests.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No pending join requests.
-        </p>
+      {members.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No members found.</p>
       ) : (
-        requests.map((req) => (
-          <Card key={req.id}>
+        members.map((m) => (
+          <Card key={m.volunteerId}>
             <CardContent className="flex items-center justify-between py-4">
               <div>
-                <p className="font-medium">{req.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  Requested {req.requestedAt}
-                </p>
+                <p className="font-medium">{m.volunteer.name}</p>
+                <p className="text-sm text-muted-foreground">{m.volunteer.email}</p>
               </div>
 
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline">
-                  Reject
-                </Button>
-                <Button size="sm">
-                  Accept
-                </Button>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Joined {new Date(m.joinedAt).toLocaleDateString()}
+              </p>
             </CardContent>
           </Card>
         ))

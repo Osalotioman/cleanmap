@@ -5,8 +5,13 @@ import { calculateDistance, reverseGeocode } from "@/lib/geospatial";
 import { errorResponse, successResponse } from "@/lib/api-utils";
 
 /**
- * GET /api/communities/list?lat=<lat>&lon=<lon>
- * List communities filtered by user's current state
+ * GET /api/communities/list
+ * 
+ * Supported query modes:
+ * - Geo mode (recommended): ?lat=<lat>&lon=<lon>
+ *   Computes currentState via reverse geocoding, returns distance sorted.
+ * - Filter mode: ?state=<state>&search=<term>
+ *   Useful for basic search/filter UIs and pages that don't have coordinates.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   try {
@@ -32,21 +37,36 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
 
     const { searchParams } = new URL(request.url);
-    const lat = parseFloat(searchParams.get("lat") || "");
-    const lon = parseFloat(searchParams.get("lon") || "");
 
-    if (isNaN(lat) || isNaN(lon)) {
-      return errorResponse("Valid latitude and longitude required", 400);
+    const rawLat = searchParams.get("lat");
+    const rawLon = searchParams.get("lon");
+    const lat = rawLat ? parseFloat(rawLat) : null;
+    const lon = rawLon ? parseFloat(rawLon) : null;
+
+    const stateFilter = (searchParams.get("state") || "").trim();
+    const search = (searchParams.get("search") || "").trim();
+
+    const hasGeo = lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon);
+
+    // Determine state: prefer explicit filter, otherwise infer from geo.
+    let currentState = stateFilter;
+    if (!currentState && hasGeo) {
+      const location = await reverseGeocode(lat!, lon!);
+      currentState = (location.state || "").trim();
     }
 
-    // Get current state from coordinates
-    const location = await reverseGeocode(lat, lon);
-    const currentState = location.state || "";
-
-    // Get all communities in the same state
+    // Get communities (optionally filtered by state and/or name search)
     const communities = await prisma.community.findMany({
       where: {
-        state: currentState,
+        ...(currentState ? { state: currentState } : {}),
+        ...(search
+          ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+          : {}),
       },
       include: {
         creator: {
@@ -63,18 +83,20 @@ export async function GET(request: Request): Promise<NextResponse> {
       },
     });
 
-    // Calculate distances and sort
-    const communitiesWithDistance = communities
-      .map((community) => ({
-        ...community,
-        distance: calculateDistance(
-          lat,
-          lon,
-          community.centerLat,
-          community.centerLon
-        ),
-      }))
-      .sort((a, b) => a.distance - b.distance);
+    // Calculate distances only when we have geo coordinates.
+    const communitiesWithDistance = hasGeo
+      ? communities
+          .map((community) => ({
+            ...community,
+            distance: calculateDistance(
+              lat!,
+              lon!,
+              community.centerLat,
+              community.centerLon
+            ),
+          }))
+          .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
+      : communities;
 
     // Check membership status
     const communitiesWithMembership = await Promise.all(

@@ -19,6 +19,7 @@ import {
 import { Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { CreateCommunityForm } from "@/components/create-community-form"
+import { useLocation } from "@/lib/hooks/use-location"
 
 type MyGeoCommunity = {
   id: string
@@ -29,6 +30,7 @@ type MyGeoCommunity = {
 }
 
 export default function MyCommunitiesPage() {
+  const location = useLocation()
   const [communities, setCommunities] = useState<MyGeoCommunity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +42,15 @@ export default function MyCommunitiesPage() {
         setLoading(true)
         setError(null)
 
-  const response = await fetch("/api/communities/list")
+        const params = new URLSearchParams()
+        if (location.latitude != null) params.set("lat", String(location.latitude))
+        if (location.longitude != null) params.set("lon", String(location.longitude))
+
+        const url = params.toString()
+          ? `/api/communities/list?${params.toString()}`
+          : "/api/communities/list"
+
+        const response = await fetch(url)
         const data = await response.json()
 
         if (!response.ok) {
@@ -61,8 +71,12 @@ export default function MyCommunitiesPage() {
       }
     }
 
-    fetchMyCommunities()
-  }, [])
+    // Wait until geolocation finishes resolving; if it fails, we'll still try
+    // with no geo params (list endpoint supports filter mode).
+    if (!location.loading) {
+      fetchMyCommunities()
+    }
+  }, [location.latitude, location.longitude, location.loading])
 
   const handleCreateSuccess = () => {
     setShowCreateDialog(false)

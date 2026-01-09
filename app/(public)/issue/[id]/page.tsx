@@ -1,13 +1,15 @@
 "use client"
 
+import Image from "next/image"
+import { use } from "react"
 import MapPicker from "@/components/mappicker"
 
 interface IssueProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default function IssueDetails({ params }: IssueProps) {
-  const issueId = params.id;
+  const { id: issueId } = use(params)
   
   // Dummy issue data
   const issue = {
@@ -49,12 +51,18 @@ export default function IssueDetails({ params }: IssueProps) {
       {issue.images?.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {issue.images.map((src, i) => (
-            <img
+            <div
               key={i}
-              src={src}
-              alt={`issue-photo-${i}`}
-              className="h-24 w-24 object-cover rounded-md border"
-            />
+              className="relative h-24 w-24 overflow-hidden rounded-md border"
+            >
+              <Image
+                src={src}
+                alt={`issue-photo-${i}`}
+                fill
+                sizes="96px"
+                className="object-cover"
+              />
+            </div>
           ))}
         </div>
       )}

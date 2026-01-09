@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -215,11 +216,15 @@ export default function ReportPage() {
             <div className="grid grid-cols-3 gap-2 mt-2">
               {previews.map((src, i) => (
                 <div key={i} className="relative">
-                  <img
-                    src={src}
-                    alt={`preview-${i}`}
-                    className="h-24 w-24 object-cover rounded-md border"
-                  />
+                  <div className="relative h-24 w-24 overflow-hidden rounded-md border">
+                    <Image
+                      src={src}
+                      alt={`preview-${i}`}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeImage(i)}
