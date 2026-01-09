@@ -70,6 +70,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const origin = request.headers.get('origin') ?? `${requestUrl.protocol}//${requestUrl.host}`;
     const emailRedirectTo = `${origin}/auth/confirm`;
 
+    console.log('📧 Resending verification email to:', email.toLowerCase());
+    console.log('🔗 Redirect URL:', emailRedirectTo);
+
     // Resend verification email using Supabase
     const supabase = await createClient();
     const { error } = await supabase.auth.resend({
@@ -81,12 +84,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     if (error) {
-      console.error('Resend verification error:', error);
+      console.error('❌ Resend verification error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: (error as unknown as { status?: number }).status,
+        code: (error as unknown as { code?: string }).code,
+      });
       
       // Don't reveal if email exists or not (security best practice)
       // Return success even if email doesn't exist
       if (error.message.toLowerCase().includes('user not found') || 
-          error.message.toLowerCase().includes('email not found')) {
+          error.message.toLowerCase().includes('email not found') ||
+          error.message.toLowerCase().includes('not found')) {
+        console.log('⚠️ User not found, returning generic success message');
         return successResponse(
           null,
           200,
@@ -97,10 +107,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       // For other errors, return generic message
       return errorResponse(
         'Unable to resend verification email. Please try again later.',
-        500
+        500,
+        { errorMessage: error.message }
       );
     }
 
+    console.log('✅ Verification email sent successfully');
+    
     // Return success (don't reveal if email exists or not)
     return successResponse(
       null,
