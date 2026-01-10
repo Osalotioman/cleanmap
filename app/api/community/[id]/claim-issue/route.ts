@@ -79,18 +79,14 @@ export async function POST(
       return errorResponse('You must be a volunteer to claim issues', 403);
     }
 
-    // Check if user is a moderator in this community
-    const userMembership = await prisma.communityMember.findUnique({
+    const userMembership = (await prisma.communityMember.findUnique({
       where: {
         communityId_volunteerId: {
           volunteerId: user.volunteerId,
           communityId,
         },
       },
-      select: {
-        role: true,
-      },
-    });
+    })) as { role: string } | null;
 
     if (!userMembership) {
       return errorResponse('You are not a member of this community', 403);
@@ -202,17 +198,14 @@ export async function DELETE(
     if (!user?.volunteerId) return errorResponse("Must be a volunteer", 403);
 
     // Check if user is a moderator in this community
-    const userMembership = await prisma.communityMember.findUnique({
+    const userMembership = (await prisma.communityMember.findUnique({
       where: {
         communityId_volunteerId: {
           volunteerId: user.volunteerId,
           communityId,
         },
       },
-      select: {
-        role: true,
-      },
-    });
+    })) as { role: string } | null;
 
     if (!userMembership) {
       return errorResponse('You are not a member of this community', 403);

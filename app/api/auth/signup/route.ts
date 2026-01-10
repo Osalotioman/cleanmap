@@ -132,33 +132,57 @@ export async function POST(request: Request): Promise<NextResponse> {
       return errorResponse('Failed to create user account', 500);
     }
 
+    // Ensure authData.user is not null for TypeScript within the transaction
+    const currentUser = authData.user;
+    
     // Create Prisma user profile
     try {
-      const user = await prisma.user.create({
-        data: {
-          id: authData.user.id,
-          email: email.toLowerCase(),
-          passwordHash: `supabase:${authData.user.id}`,
-          role: 'volunteer',
-          status: 'active',
-          firstName: firstName || null,
-          lastName: lastName || null,
-        },
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          status: true,
-          firstName: true,
-          lastName: true,
-          createdAt: true,
-        },
+      const result = await prisma.$transaction(async (tx) => {
+        // Form volunteer name
+        const volunteerName = (firstName && lastName)
+          ? `${firstName} ${lastName}`.trim()
+          : (firstName || lastName || email.toLowerCase());
+
+        // Create Volunteer record
+        const volunteer = await tx.volunteer.create({
+          data: {
+            name: volunteerName,
+            email: email.toLowerCase(),
+          },
+        });
+
+        // Create User record, linking to the new Volunteer
+        const user = await tx.user.create({
+          data: {
+            id: currentUser.id,
+            email: email.toLowerCase(),
+            passwordHash: `supabase:${currentUser.id}`,
+            role: 'volunteer', // Keep as 'volunteer'
+            status: 'active',
+            firstName: firstName || null,
+            lastName: lastName || null,
+            volunteerId: volunteer.id, // Link volunteer here
+          },
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            status: true,
+            firstName: true,
+            lastName: true,
+            createdAt: true,
+            // Include volunteerId in select for consistency, though not strictly needed for this API's return
+            volunteerId: true,
+          },
+        });
+
+        return { user, volunteer };
       });
 
       return successResponse(
-        { user },
+        { user: result.user }, // Return the user object
         201,
-        'User created successfully. Please check your email to verify your account.'
+        'User and volunteer profile created successfully. Please check your email to verify your account.'
       );
     } catch (prismaError) {
       // Rollback: Delete Supabase user if Prisma creation fails

@@ -143,6 +143,12 @@ export async function POST(request: Request): Promise<NextResponse> {
           lastName: true,
           createdAt: true,
           updatedAt: true,
+          volunteer: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       });
 

@@ -19,13 +19,17 @@ export default function VolunteerLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/auth/login?redirect=/volunteer');
     }
-  }, [user, loading, router]);
+    // New check: if user is authenticated but has no volunteer profile, redirect to complete profile page
+    if (!loading && user && !profile?.volunteer) {
+      router.push('/complete-volunteer-profile');
+    }
+  }, [user, profile, loading, router]);
 
   if (loading) {
     return (
@@ -37,6 +41,16 @@ export default function VolunteerLayout({
 
   if (!user) {
     return null;
+  }
+
+  // New check for profile.volunteer
+  if (user && !profile?.volunteer) {
+    // Render nothing or a minimal loading state while redirecting
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Redirecting to complete profile...</p>
+      </div>
+    );
   }
 
   const handleSignOut = async () => {
