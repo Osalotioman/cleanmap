@@ -132,6 +132,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       return errorResponse('Failed to create user account', 500);
     }
 
+    // Ensure authData.user is not null for TypeScript within the transaction
+    const currentUser = authData.user;
+    
     // Create Prisma user profile
     try {
       const result = await prisma.$transaction(async (tx) => {
@@ -151,9 +154,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         // Create User record, linking to the new Volunteer
         const user = await tx.user.create({
           data: {
-            id: authData.user.id,
+            id: currentUser.id,
             email: email.toLowerCase(),
-            passwordHash: `supabase:${authData.user.id}`,
+            passwordHash: `supabase:${currentUser.id}`,
             role: 'volunteer', // Keep as 'volunteer'
             status: 'active',
             firstName: firstName || null,
