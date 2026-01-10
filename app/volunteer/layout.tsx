@@ -47,11 +47,11 @@ export default function VolunteerLayout({
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
-      <header className="border-b bg-background sticky top-0 z-50">
+      {/* <header className="border-b bg-background sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-6">
-              <Link href="/" className="text-xl font-bold">
+              {/* <Link href="/" className="text-xl font-bold">
                 CleanMap
               </Link>
               <nav className="hidden md:flex items-center gap-4">
@@ -98,10 +98,10 @@ export default function VolunteerLayout({
             </div>
           </div>
         </div>
-      </header>
+      </header> */}
 
       {/* Mobile Navigation */}
-      <div className="md:hidden border-b bg-background">
+      {/* <div className="md:hidden border-b bg-background">
         <div className="container mx-auto px-4">
           <nav className="flex items-center justify-around py-2">
             <Link href="/volunteer">
@@ -126,7 +126,7 @@ export default function VolunteerLayout({
             </Link>
           </nav>
         </div>
-      </div>
+      </div> */}
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
