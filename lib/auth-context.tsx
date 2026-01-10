@@ -25,6 +25,7 @@ interface UserProfile {
   lastName: string | null;
   createdAt: string;
   updatedAt: string;
+  volunteer?: { id: string; name: string; } | null;
 }
 
 /**
@@ -139,7 +140,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setToken(data.data.token);
       setProfile(data.data.user);
-      setUser(data.data.user);
     } catch (error) {
       console.error('Sign in error:', error);
       // Provide user-friendly error messages
@@ -243,17 +243,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Refresh user profile data
    */
   const refreshProfile = async () => {
-    if (!user) return;
+    if (!user) return; // Only refresh if a user is logged in
 
     try {
-      // Re-fetch profile using the stored token
-      const storedToken = localStorage.getItem('auth_token');
-      if (storedToken) {
-        // You can add a profile endpoint later
-        // For now, we'll just keep the cached profile
+      const response = await fetch('/api/auth/profile');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to refresh profile');
       }
+
+      const refreshedProfile = data.data.user;
+
+      setProfile(refreshedProfile);
+      localStorage.setItem('user_profile', JSON.stringify(refreshedProfile));
     } catch (error) {
       console.error('Error refreshing profile:', error);
+      // Optionally handle specific errors, e.g., if token is invalid, force logout
     }
   };
 
