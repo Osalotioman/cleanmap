@@ -51,17 +51,17 @@ export default function CompleteVolunteerProfilePage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Volunteer profile created successfully!');
+        toast.success('Volunteer profile created successfully! Redirecting...');
         await refreshProfile();
-        router.push('/volunteer');
-        return; // Exit after success
+        // The page will redirect via the useEffect hook once `profile.volunteer` is updated.
+        return;
       }
 
       // Handle specific "already exists" error
       if (response.status === 409) { // 409 Conflict
         toast.info('It looks like you already have a volunteer profile. Redirecting...');
         await refreshProfile();
-        router.push('/volunteer');
+        // The page will redirect via the useEffect hook.
       } else {
         // Handle other errors
         throw new Error(data.error || 'Failed to create volunteer profile.');

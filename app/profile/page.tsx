@@ -26,16 +26,13 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) {
+  // Wait until loading is false AND we have user and profile data
+  if (loading || !user || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
         <p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
       </div>
     );
-  }
-
-  if (!user || !profile) {
-    return null;
   }
 
   return (
